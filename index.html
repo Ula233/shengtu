@@ -1,0 +1,2593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电商设计生图工作流</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #f5f0e8; --surface: #faf5ed; --surface2: #f3ebde;
+  --border: rgba(44,44,44,0.1); --text: #2c2c2c; --text2: rgba(44,44,44,0.55);
+  --primary: #0ea5e9; --primary-hover: #0284c7;
+  --success: #10b981; --warning: #f59e0b; --danger: #c53030;
+  --radius: 4px; --shadow: 2px 2px 0 rgba(44,44,44,0.08);
+}
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: radial-gradient(circle at top left, rgba(255,255,255,0.72), transparent 38%), linear-gradient(180deg, #fbf5eb, #f3ebde); color: var(--text); min-height: 100vh; }
+.app { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; overflow-y: auto; }
+.sidebar h1 { font-size: 16px; padding: 0 20px 16px; border-bottom: 1px solid var(--border); margin-bottom: 12px; font-weight: 700; }
+.sidebar h1 span { color: var(--primary); }
+.nav-group { padding: 8px 12px; }
+.nav-group-title { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 1.5px; padding: 8px; margin-bottom: 4px; }
+.nav-item { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; font-size: 13px; transition: all .2s; display: flex; align-items: center; gap: 8px; color: var(--text2); }
+.nav-item:hover { background: rgba(44,44,44,0.05); color: var(--text); }
+.nav-item.active { background: rgba(44,44,44,0.08); color: var(--text); box-shadow: 2px 2px 0 rgba(44,44,44,0.06); }
+.nav-item .icon { width: 20px; text-align: center; }
+.main { display: flex; flex-direction: column; overflow: hidden; background: transparent; }
+.header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.header h2 { font-size: 20px; font-weight: 700; }
+.header .badge { background: var(--surface2); padding: 4px 10px; border-radius: var(--radius); font-size: 11px; color: var(--text2); border: 1px solid var(--border); }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+.steps { display: flex; gap: 8px; margin-bottom: 24px; }
+.step-tab { padding: 8px 16px; border-radius: var(--radius); background: var(--surface); cursor: pointer; font-size: 13px; border: 1px solid var(--border); transition: all .2s; }
+.step-tab.active { background: var(--text); border-color: var(--text); color: var(--surface); box-shadow: 2px 2px 0 rgba(44,44,44,0.15); }
+.step-tab.done { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: var(--success); }
+.card { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
+.card::before { content: none; }
+.card h3 { font-size: 14px; margin-bottom: 12px; color: var(--text); font-weight: 600; }
+.card p { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 8px; }
+textarea, input, select { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; color: var(--text); font-size: 13px; resize: vertical; font-family: inherit; }
+textarea:focus, input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(14,165,233,0.1); }
+textarea { min-height: 120px; }
+.btn { padding: 10px 20px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all .2s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; }
+.btn-primary { background: var(--text); color: var(--surface); }
+.btn-primary:hover { background: #1a1814; box-shadow: 2px 2px 0 rgba(44,44,44,0.15); }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: rgba(44,44,44,0.06); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-copy { background: transparent; color: var(--text2); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; border-radius: var(--radius); }
+.btn-copy:hover { border-color: var(--text); color: var(--text); }
+.btn-group { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.upload-zone { border: 1.5px dashed rgba(44,44,44,0.2); border-radius: var(--radius); padding: 40px; text-align: center; cursor: pointer; transition: all .2s; background: #fff; }
+.upload-zone:hover { border-color: var(--primary); background: rgba(14,165,233,0.03); }
+.upload-zone img { max-width: 200px; max-height: 200px; border-radius: var(--radius); margin-top: 12px; }
+.prompt-box { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 12px 0; font-size: 12px; line-height: 1.8; white-space: pre-wrap; max-height: 400px; overflow-y: auto; position: relative; }
+.loading { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(44,44,44,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.menu-toggle { display: none; background: none; border: none; color: var(--text); font-size: 24px; cursor: pointer; padding: 4px 8px; }
+.overlay { display: none; position: fixed; inset: 0; background: rgba(44,44,44,0.3); z-index: 99; backdrop-filter: blur(2px); pointer-events: none; }
+.overlay.show { display: block; pointer-events: auto; }
+.img-thumb { position: relative; display: inline-block; }
+.img-thumb img { max-width: 120px; max-height: 120px; border-radius: var(--radius); border: 1px solid var(--border); }
+.img-thumb .del-btn { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--danger); color: #fff; border: none; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.img-thumb .del-btn:hover { transform: scale(1.2); }
+@media (max-width: 768px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: fixed; left: -300px; top: 0; bottom: 0; width: 280px; z-index: 100; transition: left .3s ease; }
+  .sidebar.open { left: 0; }
+  .menu-toggle { display: block; }
+  .header { padding: 12px 16px; }
+  .content { padding: 16px; }
+  .steps { flex-wrap: wrap; }
+  .form-row { grid-template-columns: 1fr; }
+  .upload-zone { padding: 24px; }
+}
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay" onclick="toggleDrawer()"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <h1>🎨 <span>AI电商</span>设计工作流</h1>
+    <div class="nav-group">
+      <div class="nav-group-title">快捷生图</div>
+      <div class="nav-item active" data-workflow="home"><span class="icon">🏠</span>首页</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">基础生图</div>
+      <div class="nav-item" data-workflow="main-image"><span class="icon">🖼</span>主图生成</div>
+      <div class="nav-item" data-workflow="detail-page"><span class="icon">📄</span>详情图生成</div>
+      <div class="nav-item" data-workflow="poster"><span class="icon">🎯</span>海报生成</div>
+      <div class="nav-item" data-workflow="white-bg"><span class="icon">⬜</span>精修白底图</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">产品摄影</div>
+      <div class="nav-item" data-workflow="product-photo"><span class="icon">📷</span>产品摄影场景</div>
+      <div class="nav-item" data-workflow="fashion-model"><span class="icon">👗</span>服饰模特摄影</div>
+      <div class="nav-item" data-workflow="fashion-product"><span class="icon">👔</span>服饰产品摄影</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">风格复刻</div>
+      <div class="nav-item" data-workflow="style-high"><span class="icon">🎨</span>高精度复刻</div>
+      <div class="nav-item" data-workflow="style-low"><span class="icon">🖌</span>低精度复刻</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">跨境电商</div>
+      <div class="nav-item" data-workflow="cross-main"><span class="icon">🌍</span>跨境主图</div>
+      <div class="nav-item" data-workflow="cross-poster"><span class="icon">🌐</span>跨境海报</div>
+      <div class="nav-item" data-workflow="cross-detail"><span class="icon">📋</span>跨境详情图</div>
+      <div class="nav-item" data-workflow="cross-style"><span class="icon">✨</span>跨境风格复刻</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">高级功能</div>
+      <div class="nav-item" data-workflow="visual-compose"><span class="icon">🎭</span>视觉合成打光</div>
+      <div class="nav-item" data-workflow="fashion-detail"><span class="icon">📐</span>服饰详情图</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">亚马逊A+</div>
+      <div class="nav-item" data-workflow="amazon-aplus-module"><span class="icon">📦</span>A+分模块输出</div>
+      <div class="nav-item" data-workflow="amazon-aplus-oneshot"><span class="icon">🖼️</span>A+一屏直出</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">系统</div>
+      <div class="nav-item" data-workflow="settings"><span class="icon">⚙️</span>API设置</div>
+    </div>
+  </aside>
+  <main class="main" id="mainContent"></main>
+</div>
+<script>
+const WORKFLOWS = {
+  'main-image': {
+    name: '主图生成', ratio: '1:1', count: 10,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '生成电商主图，含营销活动通栏，突出产品核心卖点',
+  },
+  'detail-page': {
+    name: '详情图生成', ratio: '2:3竖版', count: 15,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '生成电商详情图，15屏竖版，杂志级排版设计',
+  },
+  'poster': {
+    name: '海报生成', ratio: '9:16竖版', count: 10,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '生成电商海报，视觉冲击力强，适合活动推广',
+  },
+  'white-bg': {
+    name: '精修白底图', ratio: '1:1', count: 1,
+    steps: ['选择模式', '产品识别(可选)', '图片生成'],
+    desc: '生成纯白背景精修产品图，商业级画质',
+  },
+  'product-photo': {
+    name: '产品摄影场景', ratio: '1:1', count: 5,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '生成产品摄影场景图：氛围图、使用场景、细节特写、手持展示',
+  },
+  'fashion-model': {
+    name: '服饰模特摄影', ratio: '9:16竖版', count: 10,
+    steps: ['服饰识别', '提示词生成', '图片生成'],
+    desc: '生成服饰模特摄影图，支持指定模特，多角度展示',
+  },
+  'fashion-product': {
+    name: '服饰产品摄影', ratio: '1:1', count: 5,
+    steps: ['服饰识别', '提示词生成', '图片生成'],
+    desc: '生成服饰产品多角度&细节摄影图',
+  },
+  'style-high': {
+    name: '高精度风格复刻', ratio: '2:3竖版', count: 0,
+    steps: ['选择方法'],
+    desc: '两种方法：image-2版（快速）/ 香蕉版（精细）',
+  },
+  'style-low': {
+    name: '低精度风格复刻', ratio: '2:3竖版', count: 0,
+    steps: ['产品识别报告', '提示词反推', '图片生成'],
+    desc: '产品识别报告+风格参考反推，生成半原创电商图',
+  },
+  'cross-main': {
+    name: '跨境主图', ratio: '1:1', count: 10,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '面向海外市场的电商主图生成',
+  },
+  'cross-poster': {
+    name: '跨境海报', ratio: '9:16竖版', count: 10,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '面向海外市场的电商海报生成',
+  },
+  'cross-detail': {
+    name: '跨境详情图', ratio: '2:3竖版', count: 15,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '面向海外市场的电商详情图生成',
+  },
+  'cross-style': {
+    name: '跨境风格复刻', ratio: '2:3竖版', count: 0,
+    steps: ['产品识别', '提示词反推', '图片生成'],
+    desc: '上传产品图识别+参考图风格反推，生成跨境电商图',
+  },
+  'visual-compose': {
+    name: '视觉合成打光', ratio: '自定义', count: 0,
+    steps: ['图生文反推提示词', '图片生成', '产品迁移融合'],
+    desc: '反推提示词→生成场景图→上传产品图融合打光',
+  },
+  'fashion-detail': {
+    name: '服饰详情图', ratio: '2:3竖版', count: 15,
+    steps: ['服饰识别', '提示词生成', '图片生成'],
+    desc: '生成电商服饰&模特详情图',
+  },
+  'amazon-aplus-module': {
+    name: 'A+分模块输出', ratio: '按模块', count: 0,
+    steps: ['产品识别', '提示词生成', '图片生成'],
+    desc: '亚马逊A+图分模块输出法，逐屏生成',
+  },
+  'amazon-aplus-oneshot': {
+    name: 'A+一屏直出', ratio: '整页', count: 0,
+    steps: ['产品识别', '图片生成'],
+    desc: '亚马逊A+图一屏直出法，整页一次生成',
+  },
+};
+const PROMPTS = {
+  recognition: `# 任务说明
+产品信息智能提取，请仔细分析我上传的产品图片，自动提取以下信息：
+
+自动识别项目：
+
+卖点提取
+从包装上的文案提取核心卖点关键词
+从产品图标/认证标识提取卖点（如：有机认证、无添加、进口等）
+从产品视觉特征推断卖点（如：颜色、材质、工艺）
+提取数据卖点（如：百分比、含量、时长等）
+联网搜索产品相关卖点
+
+目标受众推断
+根据包装风格推断目标用户群体
+根据产品类型推断年龄段
+根据价格定位推断消费层级
+
+设计风格推断
+根据产品风格以及目标受众在「视觉风格库」选择合适的风格
+
+字体设计推断
+根据设计风格在「字体风格库」选择合适的效果
+
+产品参数提取
+从包装文字提取产品规格（长宽高/净含量/尺码/功率等）
+提取成分信息/配料表/营养成分
+提取使用说明/注意事项
+提取生产日期/保质期/储存方式
+
+特殊需求（可选）
+【是否需要模特】：是/否
+【是否需要场景】：是/否
+【是否需要数据可视化】：是/否
+
+## 视觉风格库
+简约轻奢：极简留白风、高级冷淡风、细质轻奢风、哑光质感风、通透玻璃风、极简几何风
+国潮新中式：传统国风、新中式禅意、古风雅致、非遗纹样风、东方水墨风、宫廷华贵风
+潮流先锋：赛博朋克风、Y2K千禧风、故障艺术风、酸性设计风、孟菲斯撞色风、街头涂鸦风
+甜美可爱：马卡龙清新风、软萌少女风、卡通童趣风、奶油治愈风、气泡可爱风
+复古文艺：港风复古、美式复古、法式复古、民国复古、胶片质感风、复古画报风
+科技机能：未来科技风、机能赛博风、金属机械风、数码电竞风、全息镭射风
+自然治愈：森系清新风、日系侘寂风、田园治愈风、海洋度假风、绿植自然风
+节日大促：年货喜庆风、圣诞狂欢风、七夕浪漫风、618大促风、双11狂欢风
+商务质感：商务极简风、高端商务风、职场干练风、稳重质感风
+质感肌理：大理石肌理、皮革肌理、木纹肌理、磨砂肌理、鎏金肌理、水晶肌理
+
+## 字体风格库
+基础排版：居中对称排版、左对齐极简排版、阶梯错落排版、环绕式排版、分栏模块化排版
+质感特效：金属渐变质感、磨砂玻璃质感、液态流体质感、镭射霓虹质感、鎏金烫金质感
+光影特效：长投影文字、内发光文字、外发光文字、霓虹灯管文字、立体浮雕文字
+立体造型：2.5D等距文字、厚切立体文字、斜切透视文字、折纸折叠文字、悬浮立体文字
+潮流创意：故障风文字、像素风文字、赛博朋克文字、Y2K千禧风文字、酸性设计文字
+国风国潮：书法笔触文字、烫金篆刻文字、水墨晕染文字、新中式简约文字
+简约高级：超细衬线文字、无衬线极简文字、细体留白文字、半透明叠加文字
+促销氛围：爆炸冲击文字、尖角锐利文字、彩带飘带文字、标签贴纸文字、价格突出文字
+
+# 输出格式：
+请将识别结果整理为以下格式：
+【识别报告】
+品牌名称：[中文] / [英文]
+产品类型：[大类] - [具体产品]
+产品规格：[具体规格]
+产品尺寸：[具体尺寸]
+核心卖点：
+[卖点1 - 中英文]
+[卖点2 - 中英文]
+[卖点3 - 中英文]
+[卖点4 - 中英文]
+[卖点5 - 中英文]
+设计风格：[风格描述]
+字体设计：[风格描述]
+目标受众：[用户画像]
+品牌调性：[调性描述]
+包装亮点：[特殊设计元素]
+特殊需求：[特殊需求描述]`,
+
+  crossRecognition: `# 任务说明
+请仔细分析我上传的产品图片，并结合我指定的【目标国家/地区】和【电商平台】，进行深度的产品信息提取
+
+## 自动识别项目：
+品牌名称识别
+从包装/产品上识别品牌LOGO文字
+识别中文品牌名和英文品牌名
+
+产品类型判断
+识别产品所属类别（服装/食品/电子/美妆/家居/宠物用品等）
+识别具体产品名称（从包装文字或产品形态判断）
+识别产品规格（尺寸、容量、重量等）
+
+卖点提取
+从包装上的文案提取核心卖点关键词
+从产品图标/认证标识提取卖点（如：有机认证、无添加、进口等）
+从产品视觉特征推断卖点（如：颜色、材质、工艺）
+提取数据卖点（如：百分比、含量、时长等）
+联网搜索产品相关卖点
+
+目标受众推断
+根据包装风格推断目标用户群体
+根据产品类型推断年龄段
+根据价格定位推断消费层级
+
+产品参数提取
+从包装文字提取产品规格（净含量/尺码/功率等）
+提取成分信息/配料表/营养成分
+提取使用说明/注意事项
+提取生产日期/保质期/储存方式
+
+产品细节识别
+识别产品材质质感（光滑/粗糙/哑光/高光等）
+识别产品结构特点（可拆卸/折叠/便携等）
+识别包装特色（自封袋/泵头/喷雾/滴管等）
+
+目标受众与场景 (Target Audience)
+受众画像：基于目标国家的社会结构，推断核心购买人群（例如：美国郊区家庭主妇、日本单身白领）。
+场景建议：为Listing详情页推荐符合当地生活习惯的使用场景图（例如：欧美-户外草坪/开放式厨房；日本-榻榻米/狭窄玄关）。
+
+## 输出格式：
+请将识别结果整理为以下格式：
+【识别报告】
+品牌名称：[中文] / [英文]
+产品类型：[大类] - [具体产品]
+产品规格：[具体规格]
+产品尺寸：[具体尺寸]
+核心卖点：
+[卖点1 - 中文]
+[卖点2 - 中文]
+[卖点3 - 中文]
+[卖点4 - 中文]
+[卖点5 - 中文]
+目标受众：[用户画像]
+品牌调性：[调性描述]
+包装亮点：[特殊设计元素]
+特殊需求：[特殊需求描述]
+目标国家/地区：[例如：美国、日本、沙特、德国、东南亚等]
+使用的语言：[英文、日文、阿拉伯语等]
+电商平台：[例如：Amazon, TikTok Shop, Shopify, Shopee, Rakuten]`,
+
+  fashionProductRecognition: `# 任务说明
+请识别该服饰配饰产品核心信息，按以下模板输出结构化报告，仅保留实际相关信息，剔除无关维度，描述精准简洁：
+
+# 输出产品信息识别报告
+产品品类：
+核心材质 / 面料：
+关键工艺 / 结构：
+配件 / 五金：
+核心设计细节：
+核心材质质感：
+产品尺寸：`,
+
+  fashionProductGen: `产品多角度摄影图提示词
+# 任务说明
+基于上述服饰配饰产品信息识别报告，为该产品生成专属电商多角度摄影提示词，分屏输出，比例1:1
+
+# 生成规则
+1. 核心贴合电商产品摄影需求，保留 High Definition、Natural Soft Light、Clean Background 等通用拍摄关键词；
+2. 保留产品所属品类适配的通用拍摄角度，补充该品类专属核心展示角度，剔除无关品类角度；
+3. 将报告中的产品材质、工艺、设计细节的英文表述，叠加至对应拍摄角度的提示词中；
+4. 提示词统一格式为「拍摄角度：英文关键词，逗号分隔」，单角度关键词不冗余，突出核心展示重点。
+5. 必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 描述【识别报告】中的产品尺寸，尺寸比例保持1:1
+
+---
+
+产品细节图提示词
+# 任务说明
+基于上述产品信息识别报告，为该产品生成专属细节图拍摄提示词，分屏输出，比例1:1
+
+# 生成规则：
+1. 以服饰配饰全品类通用细节提示词为基础，替换为报告中产品专属词汇；
+2. 补充核心工艺、设计细节、材质质感的英文表述；
+3. 剔除产品无关的细节维度；
+4. 提示词格式为「细节维度：英文关键词，逗号分隔」，保留 Macro Shot/UltraDetail 等核心拍摄词。
+5. 必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 描述【识别报告】中的产品尺寸，尺寸比例保持1:1`,
+
+  fashionModelRecognition: `# 任务说明
+基于上传的服饰产品图片（正面/背面/细节/吊牌/包装），精准提取服饰专属信息，结果适配电商详情页、商品上架，确保完整、精准、可直接复用。
+
+# 提取项目
+## 品牌名称及LOGO详情
+- 提取：中文/英文品牌名（无则填"无"）
+- 补充：LOGO呈现位置（领标/吊牌等）、工艺（绣标/烫标等）、设计风格（字体+图标+配色）
+## 产品类型及核心规格
+- 类型：大类（服装）-细分品类-具体产品名（如：服装-上衣-宽松圆领卫衣）
+- 规格：尺码（含详细数值）、面料克重、单件重量、版型、厚度
+## 核心卖点
+- 提取：吊牌/印花/视觉推断的卖点（显瘦、亲肤等）、认证类卖点、数据卖点（成分占比等）
+- 补充：同品类热门搜索卖点，需标注中英文
+## 目标受众
+结合风格、版型、价位，明确年龄段、消费层级、穿搭场景、身形适配偏好
+## 产品参数
+面料成分及占比、尺码详情、弹性、洗涤护理、版型细节（领型/袖型等）
+## 产品细节
+面料质感/触感、结构特点（可拆卸/可调节等）、工艺细节、包装吊牌特色，补充色差、透气性等
+## 模特推荐
+结合产品风格，推荐模特人种、年龄段、身形、气质，补充穿搭建议
+## 场景推荐
+结合风格、季节、受众，推荐具体拍摄/穿搭场景，补充场景氛围建议
+## 设计风格
+结合产品风格推荐使用的设计风格以及字体
+
+# 输出格式（可直接复用）
+【服饰类产品信息识别报告】
+洗涤护理：[总结]
+补充说明：[如有]`,
+
+  fashionModelGenNew: `#任务说明
+结合【识别报告】及服饰产品参考图【图1】，生成10屏、9:16竖版服饰电商模特图提示词。核心目标：指导AI生成贴合电商服饰摄影图，突出服饰卖点，精准还原产品，提升转化。
+
+#核心生成规范
+
+##视觉风格要求
+1. 字体设计风格描述[根据识别报告]
+2. 设计风格描述[根据识别报告]
+3. 每一页的排版设计像杂志排版一样精致，产品卖点可视化，产品的拍摄角度多元化
+
+##服饰产品还原要求
+每屏提示词需明确包含：
+1. 严格还原【图1】所有细节（颜色、面料、版型、LOGO、文字、图案、五金等），无AI偏色、失真；
+2. 不修改、不增减服饰任何设计，规避AI生成异化。
+
+##模特生成要求
+1. 若用户没有指定模特则根据[识别报告]使用推荐的模特
+2. 若用户上传了模特图，必须严格使用用户指定的【图2】模特（模特的身高、体型、五官、发型需与用户指定一致，不得替换或修改模特特征）；描述【识别报告】中的产品尺寸，尺寸比例保持1:1
+3. 模特妆容、发型需适配当前服饰风格（如休闲风适配清透裸妆、通勤风适配精致淡妆），妆容自然不夸张，发型整洁不杂乱，不遮挡服饰核心细节；
+4. 模特姿势需贴合服饰卖点（如上装突出领口/袖口设计、下装突出版型/长度、连衣裙突出腰线/裙摆），姿势自然舒展、不僵硬，表情亲和大气，符合电商服饰受众审美，避免夸张怪异姿势；
+5. 模特穿搭需合理，若服饰为单件，搭配的内搭、配饰需适配服饰风格且不抢主体风头；若为套装，需完整展示套装所有部件的搭配效果。
+6. 中文提示词：600-1000字/屏，明确服饰细节、模特要求、场景、角度、光影、画面氛围
+7. 生成提示词而不是生图`,
+
+  fashionRecognition: `#任务说明
+基于上传的服饰产品图片，精准提取服饰专属信息。
+
+#提取项目
+## 品牌名称及LOGO详情
+- 提取：中文/英文品牌名
+- 补充：LOGO呈现位置、工艺、设计风格
+
+## 产品类型及核心规格
+- 类型：大类-细分品类-具体产品名
+- 规格：尺码、面料克重、版型、厚度
+
+## 核心卖点
+- 提取：吊牌/印花/视觉推断的卖点
+- 补充：同品类热门搜索卖点（中英文）
+
+## 目标受众
+- 年龄段、消费层级、穿搭场景、身形适配
+
+## 产品参数
+- 面料成分及占比、尺码详情、弹性、洗涤护理、版型细节
+
+## 产品细节
+- 面料质感/触感、结构特点、工艺细节
+
+## 模特推荐
+- 推荐模特人种、年龄段、身形、气质
+
+## 场景推荐
+- 推荐具体拍摄/穿搭场景及氛围
+
+输出格式：
+【服饰类产品信息识别报告】
+品牌名称：[中文] / [英文]
+产品类型：[大类]-[细分品类]-[具体产品名]
+产品规格：版型+尺码+面料成分+克重+厚度+弹性
+核心卖点：[卖点1-中英文]、[卖点2-中英文]...
+目标受众：[用户画像]
+品牌调性：[描述]
+产品细节：质感+工艺+结构特点
+模特推荐：[描述]
+场景推荐：[具体场景+氛围]`,
+
+  crossMainImageGen: `# 任务说明
+请基于用户提供的【识别报告】和【目标国家/市场】，设计一套适用于海外电商平台的（1:1）10屏跨境电商详情页提示词方案
+
+# 提示词生成规范
+
+## 产品还原
+产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1
+
+## 语言
+1. 文字内容：海报内的文字（标题/副标题）为目标国语言
+2. 模特特征：根据目标国家指定模特族裔（如：Target US -> Diverse models/Caucasian; Target JP -> Asian models）。
+
+## 视觉要求：
+1. 根据【识别报告】突出产品核心卖点，产品的拍摄角度多元化
+2. 包含强调风格一致性，标题字体一致性
+3. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好`,
+
+  crossDetailPageGen: `# 任务说明
+请基于用户提供的【识别报告】和【目标国家/市场】，设计一套适用于海外电商平台的10屏（2:3）跨境电商详情页提示词方案
+
+# 提示词生成规范
+
+## 产品还原
+产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1
+
+## 语言
+1. 文字内容：海报内的文字（标题/副标题）为目标国语言
+2. 模特特征：根据目标国家指定模特族裔（如：Target US -> Diverse models/Caucasian; Target JP -> Asian models）。
+
+## 视觉要求：
+1. 根据【识别报告】突出产品核心卖点，产品的拍摄角度多元化
+2. 包含强调风格一致性，标题字体一致性
+3. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好`,
+
+  crossPosterGen: `# 任务说明
+请基于用户提供的【识别报告】和【目标国家/市场】，设计一套适用于海外电商平台的（9:16）10屏跨境电商详情页提示词方案
+
+# 提示词生成规范
+
+## 产品还原
+产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1
+
+## 语言
+1. 文字内容：海报内的文字（标题/副标题）为目标国语言
+2. 模特特征：根据目标国家指定模特族裔（如：Target US -> Diverse models/Caucasian; Target JP -> Asian models）。
+
+## 视觉要求：
+1. 根据【识别报告】突出产品核心卖点，产品的拍摄角度多元化
+2. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好
+3. 包含强调风格一致性，标题字体一致性
+4. 每一屏都需要有CTA按钮
+文字是使用目标国家语言
+按钮/CTA文字格式：
+SHOP NOW →
+LEARN MORE →
+箭头符号统一使用 →`,
+
+  mainImageGen: `#任务说明
+我想为我的产品设计一套电商主图设计，帮我生成电商主图设计系统提示词（共12张主图，1:1竖版）
+
+## 视觉要求：​
+1. 使用【识别报告】推荐的视觉风格以及文字效果​
+2. 视觉大胆新颖，场景高清，整体设计有美感，高级，统一视觉风格，不要有割裂感​
+3. 突出产品核心卖点，产品卖点可视化，产品的展示角度多元化
+
+##提示词生成规范：​
+1. 产品图还原要求​
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1​
+2. 每一屏都需要输出中文提示词​
+3. 第一张主图需要再底部显示营销活动通栏​
+营销活动通栏样式：​
+与整体边框风格衔接，位于图层最高，贯穿整个版面​
+左侧是一个强调色渐变的圆角梯形，视觉上重叠在右侧长条之上，标注文案例如：“优惠到手价199”“优惠到手价”缩小放在“199”左上方​
+右侧是一个主色渐变的圆角矩形，标注利益点例如“补充多种微量元素”。​
+4. 每1屏包含强调风格一致性，标题字体一致性​
+5. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好`,
+
+  detailPageGen: `# 任务说明
+我想为我的产品设计一套电商详情图设计，帮我生成电商详情图设计系统提示词（共12屏 2:3竖版）
+
+## 视觉要求：
+1. 使用【识别报告】推荐的视觉风格以及文字效果
+2. 视觉大胆新颖，场景高清，整体设计有美感，高级，统一视觉风格，不要有割裂感
+3. 突出产品核心卖点，产品卖点可视化，产品的展示角度多元化
+
+## 提示词生成规范：
+1. 产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节"，必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1
+2. 每1屏都需要输出中文提示词
+3. 每1屏提示词都需要包含比例尺寸2:3竖屏
+4. 每1屏包含强调风格一致性，标题字体一致性
+5. 每1屏的内容分别整理成一段文字我方便拿去ai平台出图，每1屏详细包含视觉要求，主标题和副标题，信息布局，排版形式，设计感强调`,
+
+  posterGen: `#任务说明
+我想为我的产品设计一套电商海报设计，帮我生成电商海报设计系统提示词（分屏输出共12屏，9:16竖版）
+
+##视觉要求：
+1. 根据【识别报告】突出产品核心卖点
+2. 视觉大胆新颖，场景高清，整体设计有美感，高级，统一视觉风格，不要有割裂感
+3. 突出产品核心卖点，产品卖点可视化，产品的展示角度多元化
+
+##提示词生成规范：
+1. 产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1
+2. 每一屏都需要输出中文提示词
+3. 每一屏都需要有CTA按钮
+按钮/CTA文字格式：立即选购 SHOP NOW → 了解更多 LEARN MORE →
+中英文并列或上下排列
+箭头符号统一使用 →
+4. 每1屏包含强调风格一致性，标题字体一致性
+5. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好`,
+
+  crossStyleGen: `# 任务说明：
+复刻【图1】的设计风格，根据【识别报告】为【图2】产品生成一套电商详情图提示词，要求分屏生成，每一屏比例尺寸为2:3竖屏
+
+## 角色设定:
+你是一名资深的电商设计师，精通各种平面设计，设计富有创新性，创意性，注重文字排版，画面内容，生成提示词
+
+## 提示词生成规范：
+1. 需包含关键元素、场景、构图、色彩色调、画面风格、背景要素。要求设计风格、排版、色调一定要严格遵循参考这几张详情页参考图的风格
+2. 每一屏都需要输出中文提示词
+3. 分屏生成，每一屏提示词都需要包含比例尺寸2:3竖
+4. 包含强调风格一致性，标题字体一致性
+5. 产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" 必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1`,
+
+  amazonAplusRecognition: `# 任务说明
+请仔细分析我上传的产品图片，并结合我指定的【目标国家/地区】、【页面数量】、【A+类型】，进行深度的产品信息提取，生成识别报告
+
+## 自动识别项目：
+品牌名称识别
+从包装/产品上识别品牌LOGO文字
+识别中文品牌名和英文品牌名
+
+产品类型判断
+识别产品所属类别（服装/食品/电子/美妆/家居/宠物用品等）
+识别具体产品名称（从包装文字或产品形态判断）
+识别产品规格（尺寸、容量、重量等）
+
+卖点提取
+从包装上的文案提取核心卖点关键词
+从产品图标/认证标识提取卖点（如：有机认证、无添加、进口等）
+从产品视觉特征推断卖点（如：颜色、材质、工艺）
+提取数据卖点（如：百分比、含量、时长等）
+联网搜索产品相关卖点
+
+目标受众推断
+根据包装风格推断目标用户群体
+根据产品类型推断年龄段
+根据价格定位推断消费层级
+
+产品参数提取
+从包装文字提取产品规格（净含量/尺码/功率等）
+提取成分信息/配料表/营养成分
+提取使用说明/注意事项
+提取生产日期/保质期/储存方式
+
+产品细节识别
+识别产品材质质感（光滑/粗糙/哑光/高光等）
+识别产品结构特点（可拆卸/折叠/便携等）
+识别包装特色（自封袋/泵头/喷雾/滴管等）
+
+目标受众与场景 (Target Audience)
+受众画像：基于目标国家的社会结构，推断核心购买人群
+场景建议：为Listing详情页推荐符合当地生活习惯的使用场景图
+
+## 输出格式：
+【识别报告】
+品牌名称：[中文] / [英文]
+产品类型：[大类] - [具体产品]
+产品规格：[具体规格]
+产品尺寸：[具体尺寸]
+核心卖点：
+[卖点1 - 中文]
+[卖点2 - 中文]
+[卖点3 - 中文]
+[卖点4 - 中文]
+[卖点5 - 中文]
+目标受众：[用户画像]
+品牌调性：[调性描述]
+包装亮点：[特殊设计元素]
+特殊需求：[特殊需求描述]
+目标国家/地区：[例如：美国、日本、沙特、德国、东南亚等]
+使用的语言：[英文、日文、阿拉伯语等]
+A+页面数量：[页面数量]
+A+类型：[普通A+/高级A+(移动端/web端)]`,
+
+  amazonAplusModuleGen: `# 任务说明
+根据【识别报告】设计一套"符合Amazon A+模块规范"的视觉方案，并输出可直接用于生图的提示词。
+
+---
+
+# 核心规则
+
+## 模块选择
+请根据当前产品类目、核心卖点、目标市场和页面数量，自动选择最合适的模块组合。
+
+### A+ 图片尺寸与比例
+生成亚马逊 A+ 分屏提示词时，必须根据模块类型选择合适尺寸与比例。
+
+#### 优先尺寸
+1. 高级 A+ Web 端
+- 尺寸：1464 × 600 px，比例：约 2.44:1，方向：横版
+- 适合：首屏主视觉、品牌氛围图、大场景展示、核心价值传达
+2. 高级 A+ 移动端
+- 尺寸：600 × 450 px，比例：4:3，方向：横版偏方
+- 适合：移动端卖点图、功能图、场景图
+3. 普通 A+
+- 尺寸：970 × 600 px，比例：约 1.62:1，方向：横版
+- 适合：标准卖点图、功能说明图、使用场景图、效果对比图
+
+#### 补充比例
+1:1 适合多角度图/细节图；3:4 适合移动端详情图；9:16 适合移动端长屏图；16:9 适合主视觉Banner
+
+---
+
+## 视觉要求
+1. 突出产品核心卖点，产品卖点可视化，产品的展示角度多元化
+
+# 提示词规范
+1. 产品图还原要求：必须在提示词中明确说明"严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节"，必须包含【识别报告】中的产品尺寸，尺寸比例保持1:1
+2. 每一屏都需要输出对应国家语言提示词
+3. 每一条提示词都需要包含比例尺寸
+4. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细包含视觉要求，主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好`,
+
+  amazonAplusOneshotGen: `# 任务说明
+根据识别报告以及listing帮生成一套亚马逊A+电商图，要求一整张输出
+
+#生成规范
+
+## 尺寸要求
+普通A+：970 × 3000 px（5个模块）
+高级A+：
+- web端：1464 x 4200 px（7个模块）
+- 移动端：600 × 3150 px（7个模块）
+
+## 提示词视觉要求：
+1. 根据【识别报告】以及listing突出产品核心卖点
+2. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好
+
+# 识别报告
+[粘贴识别报告]`,
+
+  fashionDetailRecognition: `# 任务说明
+基于上传的服饰产品图片（正面/背面/细节/吊牌/包装），精准提取服饰专属信息，结果适配电商详情页、商品上架，确保完整、精准、可直接复用。
+
+# 提取项目
+## 品牌名称及LOGO详情
+- 补充：LOGO呈现位置（领标/吊牌等）、工艺（绣标/烫标等）、设计风格（字体+图标+配色）
+## 产品类型及核心规格
+- 类型：大类（服装）-细分品类-具体产品名（如：服装-上衣-宽松圆领卫衣）
+- 规格：尺码（含详细数值）、面料克重、单件重量、版型、厚度
+## 核心卖点
+- 提取：吊牌/印花/视觉推断的卖点（显瘦、亲肤等）、认证类卖点、数据卖点（成分占比等）
+- 补充：同品类热门搜索卖点，需标注中英文
+## 目标受众
+结合风格、版型、价位，明确年龄段、消费层级、穿搭场景、身形适配偏好
+## 产品参数
+面料成分及占比、尺码详情、弹性、洗涤护理、版型细节（领型/袖型等）
+## 产品细节
+面料质感/触感、结构特点（可拆卸/可调节等）、工艺细节、包装吊牌特色，补充色差、透气性等
+## 模特推荐
+结合产品风格，推荐模特人种、年龄段、身形、气质，补充穿搭建议
+## 场景推荐
+结合风格、季节、受众，推荐具体拍摄/穿搭场景，补充场景氛围建议
+## 设计风格
+结合产品风格推荐使用的设计风格以及字体
+
+# 输出格式（可直接复用）
+【服饰类产品信息识别报告】
+品牌名称：[中文] / [英文]
+品牌LOGO详情：呈现位置+工艺+设计风格
+产品类型：[大类]-[细分品类]-[具体产品名]
+产品规格：版型+尺码+面料成分+克重+厚度+弹性
+核心卖点：[卖点1-中英文]、[卖点2-中英文]...
+目标受众：[用户画像]
+品牌调性：[描述]
+包装亮点：[描述]
+产品细节：质感+工艺+结构特点+其他
+模特推荐：[描述]
+设计风格：[描述]
+字体风格：[描述]
+场景推荐：[具体场景+氛围]
+洗涤护理：[总结]
+补充说明：[如有]`,
+
+  fashionDetailGen: `#任务说明
+结合【识别报告】及服饰产品参考图【图1】，生成10屏、2:3竖版服饰电商详情图系统提示词。核心目标：指导AI生成贴合电商详情页的模特图，突出服饰卖点，精准还原产品，提升转化。
+
+#核心生成规范
+
+##视觉风格要求
+1. 内容：内容有纯产品展示以及模特穿搭展示
+2. 字体设计风格描述[根据识别报告]
+3. 设计风格描述[根据识别报告]
+4. 每一页的排版设计像杂志排版一样精致，产品卖点可视化，产品的拍摄角度多元化
+
+##服饰产品还原要求
+每屏提示词需明确包含：1. 严格还原【图1】所有细节（颜色、面料、版型、LOGO、文字、图案、五金等），无AI偏色、失真；2. 不修改、不增减服饰任何设计，规避AI生成异化。
+
+##模特生成要求
+1. 若用户没有指定模特则根据[识别报告]判断是否需要模特
+2. 若用户上传了模特图，必须严格使用用户指定的【图2】模特（模特的身高、体型、五官、发型需与用户指定一致，不得替换或修改模特特征）；
+3. 模特妆容、发型需适配当前服饰风格（如休闲风适配清透裸妆、通勤风适配精致淡妆），妆容自然不夸张，发型整洁不杂乱，不遮挡服饰核心细节；
+4. 模特姿势需贴合服饰卖点（如上装突出领口/袖口设计、下装突出版型/长度、连衣裙突出腰线/裙摆），姿势自然舒展、不僵硬，表情亲和大气；
+5. 模特穿搭需合理，若服饰为单件，搭配的内搭、配饰需适配服饰风格且不抢主体风头；若为套装，需完整展示套装所有部件的搭配效果。
+
+##提示词生成要求
+1. 比例：统一2:3竖版
+2. 主副标题（详情图内）：每屏需添加主标题（8-15字，突出核心卖点）和副标题（15-25字，补充细节），位置贴合画面，风格与服饰氛围统一；
+3. 中文提示词：600-1000字/屏，明确服饰细节、模特要求、场景、角度、光影、画面氛围及主副标题要求；
+4. 将每一屏的内容分别整理成一段文字我方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好
+5. 拍摄角度多元化`,
+
+  productPhotoRecognition: `#任务说明
+产品信息智能提取，请仔细分析我上传的产品图片，自动提取以下信息：
+
+自动识别项目：
+
+品牌名称识别
+从包装/产品上识别品牌LOGO文字
+识别中文品牌名和英文品牌名
+提取品牌标志的设计风格（字体、图标、配色）
+
+产品类型判断
+识别产品所属类别（服装/食品/电子/美妆/家居/宠物用品等）
+识别具体产品名称（从包装文字或产品形态判断）
+识别产品规格（尺寸、容量、重量等）
+
+卖点提取
+从包装上的文案提取核心卖点关键词
+从产品图标/认证标识提取卖点（如：有机认证、无添加、进口等）
+从产品视觉特征推断卖点（如：颜色、材质、工艺）
+提取数据卖点（如：百分比、含量、时长等）
+联网搜索产品相关卖点
+
+目标受众推断
+根据包装风格推断目标用户群体
+根据产品类型推断年龄段
+根据价格定位推断消费层级
+
+产品参数提取
+从包装文字提取产品规格（净含量/尺码/功率等）
+提取成分信息/配料表/营养成分
+提取使用说明/注意事项
+提取生产日期/保质期/储存方式
+
+产品细节识别
+识别产品材质质感（光滑/粗糙/哑光/高光等）
+识别产品结构特点（可拆卸/折叠/便携等）
+识别包装特色（自封袋/泵头/喷雾/滴管等）
+
+特殊需求（可选）
+【是否需要模特】：是/否
+【是否需要场景】：是/否
+【是否需要数据可视化】：是/否
+
+输出格式：
+【识别报告】
+品牌名称：[中文] / [英文]
+产品类型：[大类] - [具体产品]
+产品规格：[具体规格]
+核心卖点：[卖点1-中英文] [卖点2-中英文] [卖点3-中英文] [卖点4-中英文] [卖点5-中英文]
+目标受众：[用户画像]
+品牌调性：[调性描述]
+包装亮点：[特殊设计元素]
+推荐视觉风格：[视觉风格名称]
+特殊需求：[特殊需求描述]`,
+
+  productPhotoGen: `#任务说明
+根据【识别报告】生成全套电商摄影场景图提示词，比例1:1
+
+#Role:
+资深产品摄影师
+
+#生成要求
+请严格按照以下结构输出完整产品摄影提示词系统
+
+输出结构：
+场景01 - 氛围图/情绪图 (Lifestyle Image，强调产品与环境的融合)
+场景02 - 生活场景/使用场景（Usage Scene，展示产品实际使用）
+场景03 - 细节特写01（Detail 01，放大产品细节）
+场景04 - 细节特写02（Detail 02，材质/质感特写）
+场景05 - 手持展示 (Handheld)
+
+图片风格说明：
+1. 氛围图/情绪图 (Lifestyle Image)
+特点：强调产品与环境的融合，不直接推销参数，而是推销一种生活方式。
+应用：通常作为首图或详情页的第一张，用于建立第一印象。
+核心价值：引起用户情感共鸣，提高点击率。
+
+2. 使用场景图 (Usage Scene)
+特点：展示产品在实际操作中的样子，解决"这东西怎么用"和"好不好用"的问题。
+应用：厨房电器（正在榨汁）、吸尘器（正在吸宠物毛）、化妆品（正在涂抹的手部细节）。
+核心价值：验证功能，消除购买疑虑。
+
+##提示词生成规范：
+1. 产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节"
+"产品外观必须与参考图完全一致，不得改变包装设计、配色方案或品牌元素"
+2. 每张场景图必须包含：中文提示词（600-1000字）+ 负面词（20-30个关键词）`,
+
+  fashionModelGen: `#任务说明
+结合【识别报告】及服饰产品参考图【图1】，生成10屏、9:16竖版服饰电商模特图提示词。
+
+#核心生成规范
+##视觉风格要求
+1. 字体设计风格描述[根据识别报告]
+2. 设计风格描述[根据识别报告]
+3. 每一页的排版设计像杂志排版一样精致
+
+##服饰产品还原要求
+每屏提示词需明确包含：
+1. 严格还原【图1】所有细节（颜色、面料、版型、LOGO、文字、图案、五金等）
+2. 不修改、不增减服饰任何设计
+
+##模特生成要求
+1. 若用户没有指定模特则根据[识别报告]使用推荐的模特
+2. 若用户上传了模特图，必须严格使用用户指定的【图2】模特
+3. 模特妆容、发型需适配当前服饰风格
+4. 模特姿势需贴合服饰卖点
+5. 模特穿搭需合理
+
+##提示词生成要求
+1. 比例：统一9:16竖版
+2. 中文提示词：600-1000字/屏`,
+
+  styleLowRecognition: `# 任务说明
+产品信息智能提取，请仔细分析我上传的产品图片，自动提取以下信息：
+
+自动识别项目：
+
+品牌名称识别
+从包装/产品上识别品牌LOGO文字
+识别中文品牌名和英文品牌名
+提取品牌标志的设计风格（字体、图标、配色）
+
+产品类型判断
+识别产品所属类别（服装/食品/电子/美妆/家居/宠物用品等）
+识别具体产品名称（从包装文字或产品形态判断）
+识别产品规格（尺寸、容量、重量等）
+
+卖点提取
+从包装上的文案提取核心卖点关键词
+从产品图标/认证标识提取卖点（如：有机认证、无添加、进口等）
+从产品视觉特征推断卖点（如：颜色、材质、工艺）
+提取数据卖点（如：百分比、含量、时长等）
+联网搜索产品相关卖点
+
+设计风格判断
+识别包装设计风格
+识别字体风格
+识别图案元素（水彩/几何/插画/摄影）
+
+目标受众推断
+根据包装风格推断目标用户群体
+根据产品类型推断年龄段
+根据价格定位推断消费层级
+
+产品参数提取
+从包装文字提取产品规格（长宽高/净含量/尺码/功率等）
+提取成分信息/配料表/营养成分
+提取使用说明/注意事项
+提取生产日期/保质期/储存方式
+
+产品细节识别
+识别产品材质质感（光滑/粗糙/哑光/高光等）
+识别产品结构特点（可拆卸/折叠/便携等）
+识别包装特色（自封袋/泵头/喷雾/滴管等）
+
+特殊需求（可选）
+【是否需要模特】：是 / 否（如果是，描述模特类型）
+【是否需要场景】：是 / 否（如果是，描述场景类型）
+【是否需要数据可视化】：是 / 否
+【其他特殊要求】：[如：必须包含产品实物、需要对比图、需要用户评价等]
+
+# 输出格式：
+请将识别结果整理为以下格式：
+【识别报告】
+品牌名称：[中文] / [英文]
+产品类型：[大类] - [具体产品]
+产品规格：[具体规格]
+产品尺寸：[具体尺寸]
+核心卖点：
+[卖点1 - 中英文]
+[卖点2 - 中英文]
+[卖点3 - 中英文]
+[卖点4 - 中英文]
+[卖点5 - 中英文]
+主色调：[颜色名称] (#HEX) + [颜色名称] (#HEX)
+辅助色：[颜色名称] (#HEX)
+设计风格：[风格描述]
+目标受众：[用户画像]
+品牌调性：[调性描述]
+包装亮点：[特殊设计元素]
+推荐视觉风格：[视觉风格名称]
+推荐文字效果：[文字排版效果名称]
+特殊需求：[特殊需求描述]`,
+
+  styleLowReverse: `# 任务说明：
+复刻【图1】的设计风格、排版、色调，生成一段能指导AI生图工具创作类似的作品的文生图提示词，需包含关键元素、场景、构图、色彩色调、画面风格、背景要素。根据【识别报告】为我的产品生成一套电商详情图提示词，要求分屏生成，每一屏比例尺寸为2:3竖屏
+
+## 角色设定:
+你是一名资深的电商设计师，精通各种平面设计，设计富有创新性，创意性，注重文字排版，画面内容，生成提示词
+
+## 提示词生成规范：
+1. 每一屏都需要输出中文提示词
+2. 分屏生成，每一屏提示词都需要包含比例尺寸2:3竖屏
+3. 产品图还原要求
+必须在提示词中明确说明："严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节" "产品外观必须与参考图完全一致，不得改变包装设计、配色方案或品牌元素" "保持产品的真实材质质感（哑光/高光/磨砂/金属等）"
+4. 要求设计风格、排版、色调一定要严格遵循参考【图1】详情页参考图的风格，需包含关键元素、场景、构图、色彩色调、画面风格、背景要素
+
+# 行动
+开始生成提示词`,
+
+  styleReverse: `#任务说明
+请分析我上传的图片，分别生成一段能指导AI生图工具创作类似作品的文生图提示词，需包含关键元素、场景、构图、色彩色调、画面风格、背景要素。
+
+#角色设定
+你是一名资深的电商设计师，精通各种平面设计
+
+#提示词生成规范
+1. 其中关于图片产品的细节描述统一改为"使用用户上传的产品图"
+2. 图片比例2:3竖版
+3. 将每一屏的内容分别整理成一段文字方便拿去ai平台出图，每一屏详细的包含主标题和副标题，信息布局，排版形式，设计感强调，内容越详细越好`,
+
+  whiteBgSimple: `产品精修，一张产品精修图片，白底图，商业级大片摄影风格，产品必须完美无瑕，清除所有指纹、灰尘与划痕，去除所有褶皱保持布面的整洁，要求突出产品的高级感，超清摄影，图片达到商业级画质，极致锐利，细节分明，主体突出。比例1:1,专业影棚光效，商业摄影，纯白色背景 (Hex #FFFFFF)画面干净，高分辨率，无阴影，8K`,
+
+  whiteBgJewelry: `产品精修，一枚戒指的微距摄影照片，纯白色背景 (Hex #FFFFFF)。核心目标是极致展现宝石的璀璨火彩与剔透质感，以及金属（如K金、铂金）的精准色泽与高级光泽。产品必须完美无瑕，清除所有指纹、灰尘与划痕。光线需突出珠宝的立体感与闪耀度，图片达到商业级画质，极致锐利，细节分明，主体突出。3D渲染，8k。`,
+
+  whiteBgHardware: `产品精修，五金产品的微距摄影照片，纯白色背景 (Hex #FFFFFF)。核心目标是极致展现五金的金属的精准色泽与高级光泽。产品必须完美无瑕，清除所有指纹、灰尘与划痕。图片达到商业级画质，极致锐利，细节分明，主体突出。3D渲染，octane渲染，8k。`,
+
+  whiteBgCosmetics: `产品精修，【一张洁面乳的照片】，纯白色背景 (Hex #FFFFFF)。【正视图】精准还原产品颜色与包装材质(如玻璃的通透、塑料的哑光、金属的光泽)。产品完美无瑕，无任何指纹、灰尘或划痕，让产品看起来崭新、瓶身光影立体感强，提升整体质感和高级感。瓶身标签/文字需清晰锐利。光线柔和均匀，突出产品精致感，符合电商主图标准。3D渲染，8k。`,
+
+  whiteBgShoes: `产品精修，一双【运动鞋产品】的照片，纯白色背景 (Hex #FFFFFF)。【黄金拍摄角度】，精准还原鞋子的颜色与造型，确保鞋型挺拔、线条流畅。极致突出鞋面材质质感（如皮革纹理、织物网面、翻毛皮绒感）与中底的做工。胶边处理干净无溢色。去除表面杂质，线头，鞋带需整齐，LOGO清晰锐利。图片光线均匀，无明显杂乱阴影，符合电商主图标准，主体突出。8k`,
+
+  whiteBgClothing: `产品精修，一张【毛衣】的平铺照片，纯白色背景 (Hex #FFFFFF)。工整平铺摆放，完美对称，袖子自然平直，衣身平整，下摆对齐。精准还原衣物颜色，彻底消除所有穿着痕迹和褶皱、线头和阴影。优化面料质感（如棉的柔软、丝绸的光泽、羊毛的纹理），让版型看起来挺括。服装轮廓清晰，主体突出，符合电商平台主图规范。8k`,
+};
+
+let state = {
+  currentWorkflow: 'home',
+  currentStep: 0,
+  uploadedImages: [],
+  productImages: [],
+  modelImage: null,
+  recognitionResult: '',
+  generatedPrompts: '',
+  apiConfig: JSON.parse(localStorage.getItem('ecom_api_config') || '{}'),
+};
+
+function getConfig() {
+  return {
+    textUrl: state.apiConfig.textUrl || 'https://api.openai.com/v1',
+    textKey: state.apiConfig.textKey || '',
+    textModel: state.apiConfig.textModel || '',
+    imgUrl: state.apiConfig.imgUrl || '',
+    imgKey: state.apiConfig.imgKey || '',
+    imgModel: state.apiConfig.imgModel || '',
+  };
+}
+
+function saveConfig(c) { state.apiConfig = c; localStorage.setItem('ecom_api_config', JSON.stringify(c)); }
+
+function getPromptFor(wf, step) {
+  if (wf === 'visual-compose') {
+    if (step === 0) return '请分析这张图片，生成一段能指导AI生图工具创作类似的作品的文生图提示词，需包含关键元素、场景、构图、色彩色调、画面风格、背景要素。';
+    return '';
+  }
+  if (step === 0) {
+    if (wf === 'fashion-detail') return PROMPTS.fashionDetailRecognition;
+    if (wf === 'fashion-model') return PROMPTS.fashionModelRecognition;
+    if (wf === 'fashion-product') return PROMPTS.fashionProductRecognition;
+    if (wf === 'product-photo') return PROMPTS.productPhotoRecognition;
+    if (['amazon-aplus-module','amazon-aplus-oneshot'].includes(wf)) return PROMPTS.amazonAplusRecognition;
+    if (wf === 'style-high') return PROMPTS.styleReverse;
+    if (wf === 'style-low') return PROMPTS.styleLowRecognition;
+    if (['cross-main','cross-poster','cross-detail','cross-style'].includes(wf)) return PROMPTS.crossRecognition;
+    return PROMPTS.recognition;
+  }
+  if (step === 1) {
+    if (wf === 'main-image') return PROMPTS.mainImageGen;
+    if (wf === 'cross-main') return PROMPTS.crossMainImageGen;
+    if (wf === 'detail-page') return PROMPTS.detailPageGen;
+    if (wf === 'cross-detail') return PROMPTS.crossDetailPageGen;
+    if (wf === 'cross-style') return PROMPTS.crossStyleGen;
+    if (wf === 'style-low') return PROMPTS.styleLowReverse;
+    if (wf === 'poster') return PROMPTS.posterGen;
+    if (wf === 'cross-poster') return PROMPTS.crossPosterGen;
+    if (wf === 'amazon-aplus-module') return PROMPTS.amazonAplusModuleGen;
+    if (wf === 'product-photo') return PROMPTS.productPhotoGen;
+    if (wf === 'fashion-product') return PROMPTS.fashionProductGen;
+    if (wf === 'fashion-model') return PROMPTS.fashionModelGenNew;
+    if (wf === 'fashion-detail') return PROMPTS.fashionDetailGen;
+    return PROMPTS.mainImageGen;
+  }
+  return '';
+}
+
+function renderMain() {
+  const wf = state.currentWorkflow;
+  if (wf === 'settings') { renderSettings(); return; }
+  if (wf === 'home') { renderHome(); return; }
+  const w = WORKFLOWS[wf];
+  const main = document.getElementById('mainContent');
+  main.innerHTML = `
+    <div class="header"><button class="menu-toggle" onclick="toggleDrawer()">☰</button><h2>${w.name}</h2><span class="badge">${w.ratio} ${w.count?'· '+w.count+'张':''}</span></div>
+    <div class="content">
+      <p style="color:var(--text2);margin-bottom:16px;font-size:13px">${w.desc}</p>
+      <div class="steps">${w.steps.map((s,i)=>`<div class="step-tab ${i===state.currentStep?'active':''} ${i<state.currentStep?'done':''}" onclick="setStep(${i})">${i+1}. ${s}</div>`).join('')}</div>
+      <div id="stepContent"></div>
+    </div>`;
+  renderStep();
+}
+
+function setStep(i) { state.currentStep = i; renderMain(); }
+
+function renderStep() {
+  const wf = state.currentWorkflow;
+  const step = state.currentStep;
+  const el = document.getElementById('stepContent');
+  if (!el) return;
+  if (wf === 'white-bg' && step === 0) { renderWhiteBg(el); return; }
+  if (wf === 'visual-compose') { renderVisualCompose(el, step); return; }
+  if (wf === 'amazon-aplus-oneshot' && step === 1) { renderAplusOneshot(el); return; }
+  if (wf === 'style-high') { renderStyleHigh(el); return; }
+  if (step === 0) renderRecognition(el);
+  else if (step === 1) renderPromptGen(el);
+  else renderImageGen(el);
+}
+
+function renderStyleHigh(el) {
+  if (!state.styleHighMethod) state.styleHighMethod = 'image2';
+  el.innerHTML = `
+    <div class="card"><h3>选择复刻方法</h3>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn ${state.styleHighMethod==='image2'?'btn-primary':'btn-secondary'}" onclick="state.styleHighMethod='image2';renderStyleHigh(document.getElementById('stepContent'))">方法一：image-2版（快速）</button>
+        <button class="btn ${state.styleHighMethod==='banana'?'btn-primary':'btn-secondary'}" onclick="state.styleHighMethod='banana';renderStyleHigh(document.getElementById('stepContent'))">方法二：香蕉版（精细）</button>
+      </div>
+    </div>
+    ${state.styleHighMethod === 'image2' ? renderStyleHighImage2() : renderStyleHighBanana()}`;
+  showPreviews();
+  showProductPreviews();
+}
+
+function renderStyleHighImage2() {
+  return `
+    <div class="card"><h3>上传参考图（图1）</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传你想复刻风格的参考图</p>
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <p>点击上传参考图</p>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="handleUpload(event)">
+        <div id="previewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="card"><h3>上传产品图（图2）</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传你的产品图</p>
+      <div class="upload-zone" onclick="document.getElementById('productFileInput').click()">
+        <p>点击上传产品图</p>
+        <input type="file" id="productFileInput" accept="image/*" multiple hidden onchange="handleProductUpload(event)">
+        <div id="productPreviewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="card"><h3>生成提示词</h3>
+      <div class="prompt-box" id="promptBoxSH">复刻图1的设计，为图2生成电商图，分屏生成，1屏1图</div>
+      <div class="btn-group">
+        <button class="btn btn-copy" onclick="copyText('promptBoxSH')">复制提示词</button>
+        <button class="btn btn-primary" onclick="styleHighImage2Gen()">调用API生成</button>
+      </div>
+    </div>
+    <div class="card"><h3>生成结果</h3>
+      <div id="styleHighResult"><p style="color:var(--text2)">生成结果将显示在这里</p></div>
+    </div>`;
+}
+
+function renderStyleHighBanana() {
+  return `
+    <div class="card"><h3>第一步：提示词反推</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传参考图（如果是长图请裁剪为一屏一屏），支持多张同时上传批量反推</p>
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <p>点击上传参考图</p>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="handleUpload(event)">
+        <div id="previewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+      <div class="prompt-box" id="promptBoxBanana">${PROMPTS.styleReverse}</div>
+      <div class="btn-group">
+        <button class="btn btn-copy" onclick="copyText('promptBoxBanana')">复制提示词</button>
+        <button class="btn btn-primary" onclick="callTextApi(0)">调用AI反推</button>
+      </div>
+    </div>
+    <div class="card"><h3>第二步：反推结果</h3>
+      <textarea id="recognitionResult" style="min-height:200px" placeholder="AI反推的提示词将显示在这里...">${state.recognitionResult}</textarea>
+    </div>
+    <div class="card"><h3>第三步：手动修改提示词</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">修改要点：① 将产品描述改为"我上传的产品图" ② 修改文字信息（标题、正文等） ③ 补充比例信息（2:3竖版）</p>
+      <textarea id="genPrompts" style="min-height:200px" placeholder="在此编辑修改后的提示词...">${state.generatedPrompts}</textarea>
+    </div>
+    <div class="card"><h3>第四步：上传产品图并生成</h3>
+      <div class="upload-zone" onclick="document.getElementById('productFileInput').click()">
+        <p>点击上传产品图</p>
+        <input type="file" id="productFileInput" accept="image/*" multiple hidden onchange="handleProductUpload(event)">
+        <div id="productPreviewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+      <div class="btn-group" style="margin-top:12px">
+        <button class="btn btn-primary" onclick="styleHighBananaGen()">生成图片</button>
+      </div>
+    </div>
+    <div class="card"><h3>生成结果</h3>
+      <div id="styleHighResult"><p style="color:var(--text2)">生成结果将显示在这里</p></div>
+    </div>`;
+}
+
+async function styleHighImage2Gen() {
+  const c = getConfig();
+  if (!c.imgKey || !c.imgUrl) { alert('请先在API设置中配置图片生成API'); return; }
+  if (state.uploadedImages.length === 0) { alert('请上传参考图'); return; }
+  if (state.productImages.length === 0) { alert('请上传产品图'); return; }
+  const prompt = '复刻图1的设计，为图2生成电商图，分屏生成，1屏1图';
+  const images = [...state.uploadedImages, ...state.productImages];
+  const resultArea = document.getElementById('styleHighResult');
+  resultArea.innerHTML = '<p><span class="loading"></span> 正在生成...</p>';
+  const baseUrl = c.imgUrl.replace(/\/+$/, '');
+  const endpoint = baseUrl.includes('/images') ? baseUrl : baseUrl + '/images/generations';
+  try {
+    let resp;
+    if (endpoint.includes('/images/edits')) {
+      const fd = new FormData();
+      fd.append('model', c.imgModel);
+      fd.append('prompt', prompt);
+      fd.append('size', '768x1024');
+      for (let i = 0; i < images.length; i++) {
+        const blob = await (await fetch(images[i])).blob();
+        fd.append('image', blob, `image${i}.png`);
+      }
+      resp = await fetch(endpoint, { method:'POST', headers:{'Authorization':'Bearer '+c.imgKey}, body:fd });
+    } else {
+      const body = { model: c.imgModel, prompt, size: '768x1024', image: images };
+      resp = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+c.imgKey}, body:JSON.stringify(body) });
+    }
+    const data = await resp.json();
+    if (data.data && data.data[0]) {
+      const url = data.data[0].url || (data.data[0].b64_json ? 'data:image/png;base64,'+data.data[0].b64_json : null);
+      if (url) { resultArea.innerHTML = renderImageResult(url, '风格复刻结果'); return; }
+    }
+    resultArea.innerHTML = `<p style="color:var(--danger)">生成失败: ${JSON.stringify(data.error||data).slice(0,300)}</p>`;
+  } catch(e) { resultArea.innerHTML = `<p style="color:var(--danger)">请求失败: ${e.message}</p>`; }
+}
+
+async function styleHighBananaGen() {
+  const c = getConfig();
+  if (!c.imgKey || !c.imgUrl) { alert('请先在API设置中配置图片生成API'); return; }
+  if (state.productImages.length === 0) { alert('请上传产品图'); return; }
+  const prompt = document.getElementById('genPrompts')?.value || '';
+  if (!prompt.trim()) { alert('请先填写修改后的提示词'); return; }
+  state.generatedPrompts = prompt;
+  const resultArea = document.getElementById('styleHighResult');
+  resultArea.innerHTML = '<p><span class="loading"></span> 正在生成...</p>';
+  const res = await generateSingleImage(prompt, 768, 1024, c);
+  if (res.url) { resultArea.innerHTML = renderImageResult(res.url, '香蕉版生成结果'); }
+  else { resultArea.innerHTML = `<p style="color:var(--danger)">生成失败: ${res.error}</p>`; }
+}
+
+function renderVisualCompose(el, step) {
+  if (step === 0) {
+    const prompt = getPromptFor('visual-compose', 0);
+    el.innerHTML = `
+      <div class="card"><h3>上传参考图</h3>
+        <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传你想复刻风格的参考图，AI将反推出文生图提示词</p>
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+          <p>点击上传参考图片</p>
+          <input type="file" id="fileInput" accept="image/*" hidden onchange="handleUpload(event)">
+          <div id="previewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+        </div>
+      </div>
+      <div class="card"><h3>图生文反推指令</h3>
+        <div class="prompt-box" id="promptBox1">${prompt}</div>
+        <div class="btn-group">
+          <button class="btn btn-copy" onclick="copyText('promptBox1')">复制指令</button>
+          <button class="btn btn-primary" onclick="callTextApi(0)">调用AI反推</button>
+        </div>
+      </div>
+      <div class="card"><h3>反推结果（文生图提示词）</h3>
+        <textarea id="recognitionResult" style="min-height:200px" placeholder="AI反推的提示词将显示在这里...">${state.recognitionResult}</textarea>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="state.recognitionResult=document.getElementById('recognitionResult').value">保存</button>
+          <button class="btn btn-success" onclick="state.recognitionResult=document.getElementById('recognitionResult').value;setStep(1)">下一步：生成场景图 →</button>
+        </div>
+      </div>`;
+    showPreviews();
+  } else if (step === 1) {
+    el.innerHTML = `
+      <div class="card"><h3>生成场景图</h3>
+        <p style="color:var(--text2);font-size:12px;margin-bottom:8px">使用第一步反推的提示词生成场景图（不含产品）</p>
+        <textarea id="vcScenePrompt" style="min-height:150px">${state.recognitionResult}</textarea>
+        <div class="form-row">
+          <div class="form-group"><label>分辨率</label>
+            <select id="vcResolution">
+              <option value="1024x1024">1K</option>
+              <option value="2048x2048" selected>2K</option>
+              <option value="4096x4096">4K</option>
+            </select>
+          </div>
+          <div class="form-group"><label>模型</label>
+            <input id="vcModel" value="${getConfig().imgModel || 'nano-banana-pro'}" placeholder="nano-banana-pro">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="generateSceneImage()">生成场景图</button>
+        </div>
+      </div>
+      <div class="card"><h3>场景图结果</h3>
+        <div id="sceneResult"><p style="color:var(--text2)">生成的场景图将显示在这里</p></div>
+        <div class="btn-group" style="margin-top:12px">
+          <button class="btn btn-success" onclick="setStep(2)">下一步：产品融合 →</button>
+        </div>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="card"><h3>产品迁移融合</h3>
+        <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传你的产品图，与第二步生成的场景图进行融合打光</p>
+        <div class="upload-zone" onclick="document.getElementById('productFileInput').click()">
+          <p>点击上传产品图</p>
+          <input type="file" id="productFileInput" accept="image/*" hidden onchange="handleProductUpload(event)">
+          <div id="productPreviewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+        </div>
+      </div>
+      <div class="card"><h3>融图提示词</h3>
+        <textarea id="fusionPrompt" style="min-height:100px">将图1的产品替换成图2的产品，保证图2产品细节和背景不变，赋予其自然柔和的光影，图2与场景完美融合，图2与背景光线一致，图2反射环境光，保持原来背景色调，实现产品与场景在透视/光影/映射上的物理融合，商业摄影作品。</textarea>
+        <div class="form-row">
+          <div class="form-group"><label>分辨率</label>
+            <select id="vcFusionRes">
+              <option value="1024x1024">1K</option>
+              <option value="2048x2048" selected>2K</option>
+              <option value="4096x4096">4K</option>
+            </select>
+          </div>
+          <div class="form-group"><label>模型</label>
+            <input id="vcFusionModel" value="${getConfig().imgModel || 'nano-banana-pro'}" placeholder="nano-banana-pro">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="generateFusion()">生成融合图</button>
+        </div>
+      </div>
+      <div class="card"><h3>融合结果</h3>
+        <div id="fusionResult"><p style="color:var(--text2)">融合结果将显示在这里</p></div>
+      </div>`;
+    showProductPreviews();
+  }
+}
+
+function renderAplusOneshot(el) {
+  const prompt = PROMPTS.amazonAplusOneshotGen;
+  el.innerHTML = `
+    <div class="card"><h3>一屏直出提示词</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">复制下方提示词，将[粘贴识别报告]替换为第一步生成的识别报告，连同产品图一起发给AI生图工具</p>
+      <textarea id="aplusOneshotPrompt" style="min-height:250px">${prompt.replace('[粘贴识别报告]', state.recognitionResult || '[粘贴识别报告]')}</textarea>
+      <div class="btn-group">
+        <button class="btn btn-copy" onclick="copyText('aplusOneshotPrompt')">复制提示词</button>
+        <button class="btn btn-primary" onclick="generateAplusOneshot()">调用API生成</button>
+      </div>
+    </div>
+    <div class="card"><h3>生成结果</h3>
+      <div id="resultArea"><p style="color:var(--text2)">生成结果将显示在这里</p></div>
+    </div>`;
+}
+
+async function generateAplusOneshot() {
+  const c = getConfig();
+  if (!c.imgKey || !c.imgUrl) { alert('请先在API设置中配置图片生成API'); return; }
+  const model = c.imgModel || 'nano-banana-pro';
+  const prompt = document.getElementById('aplusOneshotPrompt').value;
+  if (!prompt.trim()) { alert('请输入提示词'); return; }
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = '<p><span class="loading"></span> 正在生成A+一屏直出图...</p>';
+  const res = await generateWithRetry(prompt, 970, 3000, {...c, imgModel: model}, 3);
+  if (res.url) {
+    resultArea.innerHTML = renderImageResult(res.url, 'A+一屏直出');
+  } else {
+    resultArea.innerHTML = `<p style="color:var(--danger)">生成失败: ${res.error}</p>`;
+  }
+}
+
+async function generateSceneImage() {
+  const c = getConfig();
+  const model = document.getElementById('vcModel')?.value || c.imgModel;
+  if (!model) { alert('请输入模型名'); return; }
+  const prompt = document.getElementById('vcScenePrompt').value;
+  if (!prompt.trim()) { alert('请先在第一步生成提示词'); return; }
+  const resolution = document.getElementById('vcResolution').value;
+  const [w, h] = resolution.split('x').map(Number);
+  const resultArea = document.getElementById('sceneResult');
+  resultArea.innerHTML = '<p><span class="loading"></span> 正在生成场景图...</p>';
+  const oldImages = [...state.uploadedImages];
+  state.uploadedImages = [];
+  const res = await generateWithRetry(prompt, w, h, {...c, imgModel: model}, 3);
+  state.uploadedImages = oldImages;
+  if (res.url) {
+    state.sceneImageUrl = res.url;
+    resultArea.innerHTML = renderImageResult(res.url, '场景图');
+  } else {
+    resultArea.innerHTML = `<p style="color:var(--danger)">生成失败: ${res.error}</p>`;
+  }
+}
+
+async function generateFusion() {
+  const c = getConfig();
+  const model = document.getElementById('vcFusionModel')?.value || c.imgModel;
+  if (!model) { alert('请输入模型名'); return; }
+  const prompt = document.getElementById('fusionPrompt').value;
+  if (!prompt.trim()) { alert('请输入融图提示词'); return; }
+  if (!state.sceneImageUrl && state.uploadedImages.length === 0) { alert('请先在第二步生成场景图'); return; }
+  if (state.productImages.length === 0) { alert('请上传产品图'); return; }
+  const resolution = document.getElementById('vcFusionRes').value;
+  const [w, h] = resolution.split('x').map(Number);
+  const resultArea = document.getElementById('fusionResult');
+  resultArea.innerHTML = '<p><span class="loading"></span> 正在融合生成...</p>';
+
+  const images = [];
+  if (state.sceneImageUrl) images.push(state.sceneImageUrl);
+  images.push(...state.productImages);
+
+  const baseUrl = c.imgUrl.replace(/\/+$/, '');
+  const endpoint = baseUrl.includes('/images') ? baseUrl : baseUrl + '/images/generations';
+  try {
+    const body = { model, prompt, size: `${w}x${h}`, image: images };
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.imgKey}` },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data.data && data.data[0]) {
+      const url = data.data[0].url || (data.data[0].b64_json ? 'data:image/png;base64,' + data.data[0].b64_json : null);
+      if (url) { resultArea.innerHTML = renderImageResult(url, '融合打光结果'); return; }
+    }
+    if (data.error) {
+      const errMsg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+      resultArea.innerHTML = `<p style="color:var(--danger)">生成失败: ${errMsg}</p>`;
+    } else {
+      resultArea.innerHTML = `<p style="color:var(--danger)">未知返回: ${JSON.stringify(data).slice(0,300)}</p>`;
+    }
+  } catch(err) {
+    resultArea.innerHTML = `<p style="color:var(--danger)">请求失败: ${err.message}</p>`;
+  }
+}
+
+function renderRecognition(el) {
+  const wf = state.currentWorkflow;
+  const prompt = getPromptFor(wf, 0);
+  const isCross = ['cross-main','cross-poster','cross-detail','cross-style'].includes(wf);
+  const isAplus = ['amazon-aplus-module','amazon-aplus-oneshot'].includes(wf);
+  el.innerHTML = `
+    <div class="card"><h3>上传产品图片</h3>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <p>点击或拖拽上传产品图片</p>
+        <p style="font-size:11px;color:var(--text2)">支持 JPG/PNG/WEBP</p>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="handleUpload(event)">
+        <div id="previewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+    </div>
+    ${isCross ? `<div class="card"><h3>初始化参数</h3>
+      <div class="form-row">
+        <div class="form-group"><label>目标国家/地区</label><input id="initCountry" value="${state.initCountry||''}" placeholder="美国、日本、沙特、德国、东南亚等"></div>
+        <div class="form-group"><label>目标电商平台</label><input id="initPlatform" value="${state.initPlatform||''}" placeholder="Amazon, TikTok Shop, Shopify, Shopee"></div>
+      </div>
+    </div>` : ''}
+    ${isAplus ? `<div class="card"><h3>初始化参数</h3>
+      <div class="form-row">
+        <div class="form-group"><label>目标国家/地区</label><input id="initCountry" value="${state.initCountry||''}" placeholder="美国、日本、沙特、德国、东南亚等"></div>
+        <div class="form-group"><label>A+类型</label>
+          <select id="initAplusType">
+            <option value="普通A+" ${state.initAplusType==='普通A+'?'selected':''}>普通A+</option>
+            <option value="高级A+(移动端)" ${state.initAplusType==='高级A+(移动端)'?'selected':''}>高级A+(移动端)</option>
+            <option value="高级A+(web端)" ${state.initAplusType==='高级A+(web端)'?'selected':''}>高级A+(web端)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>A+页面数量（普通A+最多5屏，高级A+最多7屏）</label><input id="initAplusCount" type="number" value="${state.initAplusCount||5}" min="1" max="7"></div>
+    </div>` : ''}
+    <div class="card"><h3>产品识别提示词</h3>
+      <p>将此提示词和产品图一起发送给AI（推荐开启深度思考）</p>
+      <div class="prompt-box" id="promptBox">${prompt}</div>
+      <div class="btn-group">
+        <button class="btn btn-copy" onclick="copyRecognitionPrompt()">复制提示词</button>
+        <button class="btn btn-primary" onclick="callTextApi(0)">调用AI识别</button>
+      </div>
+    </div>
+    <div class="card"><h3>识别报告</h3>
+      <p>AI返回的识别报告（可手动编辑修正）</p>
+      <textarea id="recognitionResult" placeholder="识别报告将显示在这里，也可以手动粘贴...">${state.recognitionResult}</textarea>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="state.recognitionResult=document.getElementById('recognitionResult').value">保存报告</button>
+        <button class="btn btn-success" onclick="state.recognitionResult=document.getElementById('recognitionResult').value;setStep(1)">下一步 →</button>
+      </div>
+    </div>`;
+  showPreviews();
+}
+
+function renderPromptGen(el) {
+  const wf = state.currentWorkflow;
+  const prompt = getPromptFor(wf, 1);
+  const isStyleHigh = wf === 'style-high';
+  const isStyleLow = wf === 'style-low';
+  const isCrossStyle = wf === 'cross-style';
+  el.innerHTML = `
+    ${isStyleHigh ? `<div class="card"><h3>上传产品图片</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传你的产品图，生成的图片将使用你的产品替换参考图中的产品</p>
+      <div class="upload-zone" onclick="document.getElementById('productFileInput').click()">
+        <p>点击上传你的产品图</p>
+        <input type="file" id="productFileInput" accept="image/*" multiple hidden onchange="handleProductUpload(event)">
+        <div id="productPreviewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+    </div>` : ''}
+    ${isStyleLow ? `<div class="card"><h3>上传参考图（风格来源）</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传你想复刻风格的参考图（图1），系统将结合第一步的产品图和识别报告生成提示词</p>
+      <div class="upload-zone" onclick="document.getElementById('productFileInput').click()">
+        <p>点击上传风格参考图</p>
+        <input type="file" id="productFileInput" accept="image/*" multiple hidden onchange="handleProductUpload(event)">
+        <div id="productPreviewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+    </div>` : ''}
+    ${isCrossStyle ? `<div class="card"><h3>上传参考图（风格来源）</h3>
+      <p style="color:var(--text2);font-size:12px;margin-bottom:8px">上传你想复刻风格的参考图（图1），系统将结合第一步的产品图（图2）和识别报告生成提示词</p>
+      <div class="upload-zone" onclick="document.getElementById('productFileInput').click()">
+        <p>点击上传风格参考图</p>
+        <input type="file" id="productFileInput" accept="image/*" multiple hidden onchange="handleProductUpload(event)">
+        <div id="productPreviewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+    </div>` : ''}
+    <div class="card"><h3>${(isCrossStyle || isStyleLow) ? '提示词反推指令' : '提示词生成指令'}</h3>
+      <p>${isStyleLow ? '不要离开当前对话，复制下方指令 + 参考图发送给AI完成风格推导' : isCrossStyle ? '复制下方指令 + 参考图 + 产品图发送给AI完成风格推导' : '将此指令发送给AI（不要离开对话，在同一对话中继续）'}</p>
+      <div class="prompt-box" id="promptBox2">${prompt}</div>
+      <div class="btn-group">
+        <button class="btn btn-copy" onclick="copyText('promptBox2')">复制指令</button>
+        <button class="btn btn-primary" onclick="callTextApi(1)">调用AI生成</button>
+      </div>
+    </div>
+    <div class="card"><h3>生成的提示词</h3>
+      <p>AI返回的图片生成提示词（可编辑调整）</p>
+      <textarea id="genPrompts" style="min-height:300px" placeholder="生成的提示词将显示在这里...">${state.generatedPrompts}</textarea>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="state.generatedPrompts=document.getElementById('genPrompts').value">保存</button>
+        <button class="btn btn-success" onclick="state.generatedPrompts=document.getElementById('genPrompts').value;setStep(2)">下一步 →</button>
+      </div>
+    </div>`;
+  showProductPreviews();
+}
+
+function renderImageGen(el) {
+  const prompts = parsePrompts(state.generatedPrompts);
+  const hasApi = getConfig().imgKey;
+  el.innerHTML = `
+    <div class="card"><h3>图片生成</h3>
+      <p>选择要生成的图片，支持多选批量生成</p>
+      <div class="status-bar" id="apiStatus">
+        <span class="dot ${hasApi?'dot-green':'dot-red'}"></span>
+        <span>${hasApi?'图片API已配置':'图片API未配置，请先在设置中配置'}</span>
+      </div>
+    </div>
+    <div class="card"><h3>生成设置</h3>
+      <div class="form-row">
+        <div class="form-group"><label>分辨率</label>
+          <select id="imgResolution">
+            <option value="1024x1024">1K (1024×1024)</option>
+            <option value="1536x1536">1.5K (1536×1536)</option>
+            <option value="2048x2048" selected>2K (2048×2048)</option>
+            <option value="2048x3072">2K竖版 (2048×3072)</option>
+            <option value="3072x2048">2K横版 (3072×2048)</option>
+            <option value="4096x4096">4K (4096×4096)</option>
+            <option value="2160x3840">4K竖版 (2160×3840)</option>
+            <option value="3840x2160">4K横版 (3840×2160)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>请求间隔（秒）</label>
+          <select id="imgDelay">
+            <option value="3">3秒（快速）</option>
+            <option value="5">5秒（推荐）</option>
+            <option value="10" selected>10秒（稳定，适合中转站）</option>
+            <option value="15">15秒（保守）</option>
+            <option value="30">30秒（极保守）</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>操作</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary" onclick="toggleAllPrompts(true)">全选</button>
+            <button class="btn btn-secondary" onclick="toggleAllPrompts(false)">取消全选</button>
+            <button class="btn btn-primary" onclick="batchGenerate()">批量生成选中</button>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--text2)">提示：中转站API建议间隔10秒以上，遇到"high load"会自动重试（等待15-30秒后重试）</p>
+    </div>
+    <div id="promptCards">${prompts.length > 0 ? prompts.map((p,i) => renderPromptCard(p,i)).join('') : '<div class="card"><p>未检测到提示词，请返回上一步生成或粘贴提示词</p><textarea id="currentPrompt" style="min-height:200px" placeholder="也可以在此直接粘贴提示词...">' + state.generatedPrompts + '</textarea><div class="btn-group"><button class="btn btn-primary" onclick="singleGenerate()">生成图片</button></div></div>'}</div>
+    <div class="card"><h3>生成结果</h3>
+      <div id="resultArea"><p style="color:var(--text2)">选择提示词后点击生成</p></div>
+    </div>`;
+}
+
+function renderPromptCard(prompt, index) {
+  return `<div class="card" style="position:relative">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <input type="checkbox" class="prompt-check" data-index="${index}" id="pcheck${index}" style="margin-top:4px;width:18px;height:18px;accent-color:var(--primary);cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <label for="pcheck${index}" style="cursor:pointer;display:block"><h3 style="font-size:13px;color:var(--primary-hover);margin-bottom:6px">第${index+1}张：${prompt.title || '图片'+(index+1)}</h3></label>
+        <div class="prompt-box" style="max-height:150px;margin:0;font-size:11px">${prompt.content}</div>
+      </div>
+      <button class="btn btn-copy" onclick="copyPromptByIndex(${index})" style="white-space:nowrap">复制</button>
+    </div>
+  </div>`;
+}
+
+function parsePrompts(text) {
+  if (!text || text.trim().length === 0) return [];
+  const results = [];
+
+  const headerPattern = /(?:^|\n)#{1,3}\s*第([一二三四五六七八九十\d]+)[张屏幕图页]?[：:\s]*([^\n]*)/g;
+  const headers = [];
+  let match;
+  while ((match = headerPattern.exec(text)) !== null) {
+    const numStr = match[1];
+    const num = '一二三四五六七八九十'.indexOf(numStr) + 1 || parseInt(numStr) || headers.length + 1;
+    headers.push({ num, title: match[2].trim(), start: match.index, headerEnd: match.index + match[0].length });
+  }
+
+  if (headers.length >= 2) {
+    for (let i = 0; i < headers.length; i++) {
+      const contentStart = headers[i].headerEnd;
+      const contentEnd = i < headers.length - 1 ? headers[i+1].start : text.length;
+      const content = text.slice(contentStart, contentEnd).trim();
+      if (content.length > 10) {
+        results.push({ title: headers[i].title || `图片${headers[i].num}`, content, index: headers[i].num });
+      }
+    }
+    return results;
+  }
+
+  const altPattern = /(?:^|\n)(?:第([一二三四五六七八九十\d]+)[张屏幕图页]|(?:场景|主图|海报|详情)\s*(\d+))[：:\s]*([^\n]*)/g;
+  const altHeaders = [];
+  while ((match = altPattern.exec(text)) !== null) {
+    const numStr = match[1] || match[2];
+    const num = '一二三四五六七八九十'.indexOf(numStr) + 1 || parseInt(numStr) || altHeaders.length + 1;
+    altHeaders.push({ num, title: (match[3]||'').trim(), start: match.index, headerEnd: match.index + match[0].length });
+  }
+
+  if (altHeaders.length >= 2) {
+    for (let i = 0; i < altHeaders.length; i++) {
+      const contentStart = altHeaders[i].headerEnd;
+      const contentEnd = i < altHeaders.length - 1 ? altHeaders[i+1].start : text.length;
+      const content = text.slice(contentStart, contentEnd).trim();
+      if (content.length > 10) {
+        results.push({ title: altHeaders[i].title || `图片${altHeaders[i].num}`, content, index: altHeaders[i].num });
+      }
+    }
+    return results;
+  }
+
+  const numPattern = /(?:^|\n)(\d+)[\.、）\)]\s*([^\n]*)/g;
+  const numHeaders = [];
+  while ((match = numPattern.exec(text)) !== null) {
+    numHeaders.push({ num: parseInt(match[1]), title: match[2].trim(), start: match.index, headerEnd: match.index + match[0].length });
+  }
+  if (numHeaders.length >= 2) {
+    for (let i = 0; i < numHeaders.length; i++) {
+      const contentStart = numHeaders[i].headerEnd;
+      const contentEnd = i < numHeaders.length - 1 ? numHeaders[i+1].start : text.length;
+      const content = text.slice(contentStart, contentEnd).trim();
+      if (content.length > 20) {
+        results.push({ title: numHeaders[i].title || `图片${numHeaders[i].num}`, content, index: numHeaders[i].num });
+      }
+    }
+    return results;
+  }
+
+  const sections = text.split(/\n---+\n|\n{3,}/).filter(s => s.trim().length > 30);
+  if (sections.length >= 2) {
+    return sections.map((s, i) => {
+      const firstLine = s.trim().split('\n')[0].replace(/^[#*\s]+/, '').slice(0, 30);
+      return { title: firstLine || `图片${i+1}`, content: s.trim(), index: i+1 };
+    });
+  }
+
+  if (text.trim().length > 20) {
+    return [{ title: '完整提示词', content: text.trim(), index: 1 }];
+  }
+  return [];
+}
+
+function toggleAllPrompts(checked) {
+  document.querySelectorAll('.prompt-check').forEach(cb => cb.checked = checked);
+}
+
+function copyPromptByIndex(index) {
+  const prompts = parsePrompts(state.generatedPrompts);
+  if (prompts[index]) {
+    navigator.clipboard.writeText(prompts[index].content);
+  }
+}
+
+async function batchGenerate() {
+  const checked = Array.from(document.querySelectorAll('.prompt-check:checked'));
+  if (checked.length === 0) { alert('请至少选择一张提示词'); return; }
+  const c = getConfig();
+  if (!c.imgKey || !c.imgUrl) { alert('请先在设置中配置图片生成API'); return; }
+  if (!c.imgModel) { alert('请先在设置中选择图片生成模型'); return; }
+
+  const prompts = parsePrompts(state.generatedPrompts);
+  const resolution = document.getElementById('imgResolution').value;
+  const [w, h] = resolution.split('x').map(Number);
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = `<p style="color:var(--text2)"><span class="loading"></span> 正在生成 ${checked.length} 张图片（每张间隔3秒避免限流）...</p>`;
+
+  state.lastBatchResults = [];
+  const delay = parseInt(document.getElementById('imgDelay')?.value || '10') * 1000;
+  for (let i = 0; i < checked.length; i++) {
+    const cb = checked[i];
+    const idx = parseInt(cb.dataset.index);
+    const prompt = prompts[idx];
+    if (!prompt) continue;
+    resultArea.innerHTML = `<p style="color:var(--text2)"><span class="loading"></span> 正在生成第${idx+1}张 (${i+1}/${checked.length}): ${prompt.title}...</p>` + renderBatchResults(state.lastBatchResults);
+
+    const res = await generateWithRetry(prompt.content, w, h, c, 3);
+    state.lastBatchResults.push({ index: idx+1, title: prompt.title, prompt: prompt.content, ...res });
+
+    if (i < checked.length - 1) await sleep(delay);
+  }
+  resultArea.innerHTML = renderBatchResults(state.lastBatchResults);
+}
+
+async function generateWithRetry(prompt, w, h, c, maxRetries) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const res = await generateSingleImage(prompt, w, h, c);
+    if (res.url) return res;
+    const err = (res.error || '').toLowerCase();
+    const isRetryable = err.includes('high load') || err.includes('rate') || err.includes('limit') || err.includes('429') || err.includes('繁忙') || err.includes('稍后') || err.includes('retry') || err.includes('overload') || err.includes('timeout') || err.includes('503') || err.includes('502');
+    if (isRetryable && attempt < maxRetries) {
+      await sleep(10000 * attempt);
+      continue;
+    }
+    return res;
+  }
+  return { error: '重试多次仍失败，建议稍后再试或换一个模型' };
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function renderBatchResults(results) {
+  if (!results || results.length === 0) return '';
+  const successCount = results.filter(r => r.url).length;
+  const failCount = results.filter(r => !r.url).length;
+  let html = `<p style="font-size:12px;color:var(--text2);margin-bottom:12px">完成 ${results.length} 张：成功 ${successCount}，失败 ${failCount}${failCount > 0 ? ' <button class="btn btn-copy" onclick="retryFailed()" style="margin-left:8px">重试失败项</button>' : ''}</p>`;
+  html += '<div class="result-grid">' + results.map(r => {
+    if (r.url) return `<div style="text-align:center">
+      <img src="${r.url}" referrerpolicy="no-referrer" crossorigin="anonymous" style="width:100%;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;padding:8px;background:var(--surface2);border-radius:8px"><a href="${r.url}" target="_blank" style="color:var(--primary);font-size:11px;word-break:break-all">点击查看图片</a></div>
+      <p style="font-size:11px;color:var(--text2);margin-top:4px">第${r.index}张: ${r.title}</p>
+      <a href="${r.url}" target="_blank" class="btn btn-copy" style="margin-top:4px;text-decoration:none;display:inline-block;font-size:10px">打开</a></div>`;
+    return `<div class="card" style="padding:12px"><p style="color:var(--danger);font-size:11px">第${r.index}张: ${r.title}</p><p style="color:var(--text2);font-size:11px;margin-top:4px">${r.error}</p></div>`;
+  }).join('') + '</div>';
+  return html;
+}
+
+async function retryFailed() {
+  const c = getConfig();
+  const resolution = document.getElementById('imgResolution')?.value || '2048x2048';
+  const [w, h] = resolution.split('x').map(Number);
+  const resultArea = document.getElementById('resultArea');
+  const failed = state.lastBatchResults.filter(r => !r.url);
+  resultArea.innerHTML = `<p><span class="loading"></span> 正在重试 ${failed.length} 张失败图片...</p>` + renderBatchResults(state.lastBatchResults.filter(r => r.url));
+
+  for (let i = 0; i < failed.length; i++) {
+    const item = failed[i];
+    const res = await generateWithRetry(item.prompt, w, h, c, 3);
+    const idx = state.lastBatchResults.findIndex(r => r.index === item.index);
+    if (idx !== -1) state.lastBatchResults[idx] = { ...item, ...res };
+    if (i < failed.length - 1) await sleep(5000);
+  }
+  resultArea.innerHTML = renderBatchResults(state.lastBatchResults);
+}
+
+async function singleGenerate() {
+  const prompt = document.getElementById('currentPrompt')?.value || '';
+  if (!prompt.trim()) { alert('请输入提示词'); return; }
+  const c = getConfig();
+  if (!c.imgKey || !c.imgUrl) { alert('请先配置图片生成API'); return; }
+  const resolution = document.getElementById('imgResolution')?.value || '2048x2048';
+  const [w, h] = resolution.split('x').map(Number);
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = '<p><span class="loading"></span> 正在生成...</p>';
+  const res = await generateSingleImage(prompt, w, h, c);
+  if (res.url) resultArea.innerHTML = `<div class="result-grid"><img src="${res.url}"></div>`;
+  else resultArea.innerHTML = `<p style="color:var(--danger)">${res.error}</p>`;
+}
+
+async function generateSingleImage(prompt, w, h, c) {
+  const baseUrl = c.imgUrl.replace(/\/+$/, '');
+  const endpoint = baseUrl.includes('/images') ? baseUrl : baseUrl + '/images/generations';
+
+  try {
+    const images = state.productImages.length > 0 ? state.productImages : state.uploadedImages;
+    let resp;
+    if (endpoint.includes('/images/edits')) {
+      const fd = new FormData();
+      fd.append('model', c.imgModel);
+      fd.append('prompt', prompt);
+      fd.append('size', `${w}x${h}`);
+      for (let i = 0; i < images.length; i++) {
+        const blob = await (await fetch(images[i])).blob();
+        fd.append('image', blob, `image${i}.png`);
+      }
+      resp = await fetch(endpoint, { method:'POST', headers:{'Authorization':`Bearer ${c.imgKey}`}, body:fd });
+    } else {
+      const body = { model: c.imgModel, prompt, size: `${w}x${h}` };
+      if (images.length > 0) body.image = images.map(img => img);
+      resp = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${c.imgKey}`}, body:JSON.stringify(body) });
+    }
+    const data = await resp.json();
+    if (data.data && data.data[0]) {
+      const imgData = data.data[0];
+      const url = imgData.url || (imgData.b64_json ? 'data:image/png;base64,' + imgData.b64_json : null);
+      if (url) return { url };
+    }
+    if (data.error) {
+      const errMsg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+      return { error: errMsg };
+    }
+    return { error: '未知返回: ' + JSON.stringify(data).slice(0, 300) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function buildImageRequestBody(prompt, w, h, c) {
+  const format = state.apiConfig.imgFormat || 'auto';
+  const url = c.imgUrl.toLowerCase();
+  const sendImage = state.apiConfig.sendRefImage === true;
+  const refImage = (sendImage && state.uploadedImages.length > 0) ? state.uploadedImages[0].replace(/^data:image\/\w+;base64,/, '') : null;
+
+  if (format === 'openai' || (format === 'auto' && url.includes('openai.com'))) {
+    const body = { model: c.imgModel, prompt, size: `${w}x${h}` };
+    if (refImage) body.image = refImage;
+    return body;
+  }
+  if (format === 'dashscope' || (format === 'auto' && (url.includes('dashscope') || url.includes('aliyun')))) {
+    const body = { model: c.imgModel, input: { prompt }, parameters: { size: `${w}*${h}` } };
+    if (refImage) body.input.ref_image = refImage;
+    return body;
+  }
+  if (format === 'zhipu' || (format === 'auto' && (url.includes('bigmodel') || url.includes('zhipu')))) {
+    const body = { model: c.imgModel, prompt, size: `${w}x${h}` };
+    if (refImage) body.image = refImage;
+    return body;
+  }
+  if (format === 'siliconflow' || (format === 'auto' && url.includes('siliconflow'))) {
+    const body = { model: c.imgModel, prompt, image_size: `${w}x${h}` };
+    if (refImage) body.image = refImage;
+    return body;
+  }
+  if (format === 'replicate' || (format === 'auto' && url.includes('replicate'))) {
+    const body = { model: c.imgModel, input: { prompt, width: w, height: h } };
+    if (refImage) body.input.image = refImage;
+    return body;
+  }
+  if (format === 'custom') {
+    try {
+      const tpl = state.apiConfig.imgBodyTemplate || '{}';
+      const body = JSON.parse(tpl.replace(/\{\{prompt\}\}/g, prompt.replace(/"/g, '\\"')).replace(/\{\{width\}\}/g, w).replace(/\{\{height\}\}/g, h).replace(/\{\{model\}\}/g, c.imgModel).replace(/\{\{size\}\}/g, `${w}x${h}`).replace(/\{\{image\}\}/g, refImage || ''));
+      return body;
+    } catch(e) {
+      const body = { model: c.imgModel, prompt, width: w, height: h };
+      if (refImage) body.image = refImage;
+      return body;
+    }
+  }
+  const body = { model: c.imgModel, prompt, width: w, height: h, size: `${w}x${h}` };
+  if (refImage) body.image = refImage;
+  return body;
+}
+
+function renderWhiteBg(el) {
+  const c = getConfig();
+  el.innerHTML = `
+    <div class="card"><h3>选择精修模式</h3>
+      <div class="form-row">
+        <div class="form-group"><label>产品类型</label>
+          <select id="whiteBgType" onchange="updateWhiteBgPrompt()">
+            <option value="simple">通用产品</option>
+            <option value="jewelry">珠宝饰品</option>
+            <option value="hardware">五金产品</option>
+            <option value="cosmetics">美妆产品</option>
+            <option value="shoes">鞋类产品</option>
+            <option value="clothing">服饰产品</option>
+          </select>
+        </div>
+        <div class="form-group"><label>分辨率</label>
+          <select id="whiteBgRes">
+            <option value="1024x1024">1K</option>
+            <option value="2048x2048" selected>2K</option>
+            <option value="4096x4096">4K</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>图片模型 (当前: ${c.imgModel||'未选择'})</label>
+        <div style="display:flex;gap:8px">
+          <input id="whiteBgModel" value="${c.imgModel||'nano-banana-pro'}" placeholder="nano-banana-pro" style="flex:1">
+          <button class="btn btn-secondary" onclick="fetchModelsForWhiteBg()">获取列表</button>
+        </div>
+        <div id="wbModelList" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="card"><h3>上传产品图</h3>
+      <div class="upload-zone" onclick="document.getElementById('fileInput2').click()">
+        <p>点击上传产品图片</p>
+        <input type="file" id="fileInput2" accept="image/*" hidden onchange="handleUpload(event)">
+        <div id="previewArea" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="card"><h3>精修提示词</h3>
+      <textarea id="whiteBgPrompt" style="min-height:150px">${PROMPTS.whiteBgSimple}</textarea>
+      <div class="btn-group">
+        <button class="btn btn-copy" onclick="copyText('whiteBgPrompt')">复制</button>
+        <button class="btn btn-primary" onclick="generateWhiteBg()">生成精修图</button>
+      </div>
+    </div>
+    <div class="card"><h3>生成结果</h3>
+      <div id="resultArea"><p style="color:var(--text2)">点击生成后结果显示在这里</p></div>
+    </div>`;
+  showPreviews();
+}
+
+async function fetchModelsForWhiteBg() {
+  const c = getConfig();
+  if (!c.imgUrl || !c.imgKey) { alert('请先在API设置中配置图片API'); return; }
+  const el = document.getElementById('wbModelList');
+  el.textContent = '加载中...';
+  try {
+    const resp = await fetch(c.imgUrl.replace(/\/+$/,'').replace(/\/(images\/(edits|generations)|chat\/completions)$/,'')+'/models', { headers:{'Authorization':'Bearer '+c.imgKey} });
+    const data = await resp.json();
+    const models = (data.data||[]).map(m=>m.id).filter(Boolean);
+    el.innerHTML = '可用: ' + models.map(m=>`<a href="#" onclick="document.getElementById('whiteBgModel').value='${m}';return false" style="color:var(--primary)">${m}</a>`).join(' | ');
+  } catch(e) { el.textContent = '获取失败: '+e.message; }
+}
+
+async function generateWhiteBg() {
+  const c = getConfig();
+  if (!c.imgKey || !c.imgUrl) { alert('请先在API设置中配置图片生成API'); return; }
+  const model = document.getElementById('whiteBgModel')?.value || c.imgModel;
+  if (!model) { alert('请输入或选择图片模型'); return; }
+  const prompt = document.getElementById('whiteBgPrompt').value;
+  if (!prompt.trim()) { alert('请输入精修提示词'); return; }
+  const resolution = document.getElementById('whiteBgRes').value;
+  const [w, h] = resolution.split('x').map(Number);
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = `<p><span class="loading"></span> 正在生成精修图（模型: ${model}）...</p>`;
+  state.apiConfig.imgModel = model;
+  localStorage.setItem('ecom_api_config', JSON.stringify(state.apiConfig));
+  const res = await generateWithRetry(prompt, w, h, {...c, imgModel: model}, 3);
+  if (res.url) {
+    resultArea.innerHTML = renderImageResult(res.url, '精修白底图');
+  } else {
+    resultArea.innerHTML = `<p style="color:var(--danger)">生成失败: ${res.error}</p>`;
+  }
+}
+
+function renderImageResult(url, title) {
+  return `<div class="result-grid"><div style="text-align:center">
+    <img src="${url}" referrerpolicy="no-referrer" crossorigin="anonymous" style="width:100%;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div style="display:none;padding:16px;background:var(--surface2);border-radius:8px">
+      <p style="color:var(--warning);font-size:12px;margin-bottom:8px">图片无法直接显示（跨域限制），请点击下方链接查看/下载：</p>
+      <a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--primary);word-break:break-all;font-size:12px">${url}</a>
+    </div>
+    <p style="font-size:11px;color:var(--text2);margin-top:4px">${title}</p>
+    <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-copy" style="margin-top:8px;text-decoration:none;display:inline-block">在新标签页打开</a>
+  </div></div>`;
+}
+
+function updateWhiteBgPrompt() {
+  const type = document.getElementById('whiteBgType').value;
+  const map = { simple:'whiteBgSimple', jewelry:'whiteBgJewelry', hardware:'whiteBgHardware', cosmetics:'whiteBgCosmetics', shoes:'whiteBgShoes', clothing:'whiteBgClothing' };
+  const ta = document.getElementById('whiteBgPrompt');
+  if (ta) ta.value = PROMPTS[map[type]] || PROMPTS.whiteBgSimple;
+}
+
+function renderHome() {
+  const c = getConfig();
+  const main = document.getElementById('mainContent');
+  main.innerHTML = `
+    <div class="header"><button class="menu-toggle" onclick="toggleDrawer()">☰</button><h2>AI 快捷生图</h2></div>
+    <div class="content">
+      <div class="card" style="background:var(--bg);border:1px solid var(--border);padding:0;overflow:visible">
+        <div style="position:relative">
+          <div id="homePreviewArea" style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 12px 0;${state.uploadedImages.length?'':'display:none'}"></div>
+          <textarea id="homePrompt" style="min-height:120px;border:none;background:transparent;resize:vertical;padding:12px;font-size:14px" placeholder="描述你想要生成的内容，输入 @ 引用上传的参考图..." oninput="homePromptInput(event)"></textarea>
+          <div id="homeAtMenu" style="display:none;position:absolute;bottom:60px;left:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.15)"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border);flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="document.getElementById('homeFileInput').click()" style="padding:6px 10px;font-size:12px">📷 上传图片</button>
+          <input type="file" id="homeFileInput" accept="image/*" multiple hidden onchange="homeUpload(event)">
+          <button class="btn btn-secondary" onclick="toggleHomeModelPanel()" style="padding:6px 10px;font-size:12px" id="homeModelBtn">${c.imgModel||'选择模型'}</button>
+          <select id="homeRatio" style="padding:6px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2)">
+            <option value="auto">智能</option><option value="1024x1024" selected>1:1</option>
+            <option value="768x1024">3:4</option><option value="1024x768">4:3</option>
+            <option value="640x1024">2:3</option><option value="1024x640">3:2</option>
+            <option value="576x1024">9:16</option><option value="1024x576">16:9</option>
+          </select>
+          <select id="homeCount" style="padding:6px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2)">
+            <option value="1">1张</option><option value="2">2张</option><option value="3">3张</option><option value="4" selected>4张</option>
+          </select>
+          <span id="homeCharCount" style="font-size:11px;color:var(--text2);margin-left:auto">0/2000</span>
+        </div>
+      </div>
+      <div id="homeModelPanel" style="display:none" class="card">
+        <h3 style="font-size:13px;margin-bottom:8px">选择模型</h3>
+        <div id="homeModelList" style="display:flex;flex-wrap:wrap;gap:6px"><p style="color:var(--text2);font-size:12px">点击获取模型列表</p></div>
+        <button class="btn btn-primary" onclick="fetchHomeModels()" style="margin-top:8px;font-size:12px">获取可用模型</button>
+      </div>
+      <div id="recipePanel" style="display:none" class="card">
+        <h3 style="font-size:13px;margin-bottom:8px">选择配方（引入工作流提示词）</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${Object.entries(WORKFLOWS).map(([k,v])=>`<button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="applyRecipe('${k}')">${v.name}</button>`).join('')}</div>
+        <button class="btn btn-secondary" style="margin-top:8px;font-size:11px" onclick="document.getElementById('recipePanel').style.display='none'">关闭</button>
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn btn-primary" onclick="homeGenerate()" style="width:100%;padding:14px;font-size:15px">生成图片</button>
+      </div>
+      <div class="card" style="margin-top:16px"><h3>生成结果</h3>
+        <div id="homeResultArea"><p style="color:var(--text2)">生成的图片将显示在这里</p></div>
+      </div>
+    </div>`;
+  showHomePreviews();
+}
+
+function showHomePreviews() {
+  const area = document.getElementById('homePreviewArea');
+  if (!area) return;
+  if (state.uploadedImages.length === 0) { area.style.display = 'none'; return; }
+  area.style.display = 'flex';
+  area.innerHTML = state.uploadedImages.map((img,i) => `<div class="img-thumb"><img src="${img}"><span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;padding:1px 5px;border-radius:4px">图${i+1}</span><button class="del-btn" onclick="event.stopPropagation();state.uploadedImages.splice(${i},1);showHomePreviews()">×</button></div>`).join('');
+}
+
+function homeUpload(e) {
+  Array.from(e.target.files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = ev => { state.uploadedImages.push(ev.target.result); showHomePreviews(); };
+    reader.readAsDataURL(f);
+  });
+}
+
+function homePromptInput(e) {
+  const ta = e.target;
+  const count = document.getElementById('homeCharCount');
+  if (count) count.textContent = ta.value.length + '/2000';
+  const val = ta.value;
+  const pos = ta.selectionStart;
+  const before = val.slice(0, pos);
+  if (before.endsWith('@') && state.uploadedImages.length > 0) {
+    const menu = document.getElementById('homeAtMenu');
+    menu.style.display = 'block';
+    menu.innerHTML = state.uploadedImages.map((img,i) => `<div style="display:inline-block;cursor:pointer;margin:4px;text-align:center" onclick="insertAtRef(${i})"><img src="${img}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;border:1px solid var(--border)"><div style="font-size:10px;color:var(--text2)">图${i+1}</div></div>`).join('');
+  } else {
+    document.getElementById('homeAtMenu').style.display = 'none';
+  }
+}
+
+function insertAtRef(idx) {
+  const ta = document.getElementById('homePrompt');
+  const pos = ta.selectionStart;
+  const val = ta.value;
+  const ref = `【图${idx+1}】`;
+  ta.value = val.slice(0, pos) + ref + val.slice(pos);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = pos + ref.length;
+  document.getElementById('homeAtMenu').style.display = 'none';
+  document.getElementById('homeCharCount').textContent = ta.value.length + '/2000';
+}
+
+function toggleHomeModelPanel() {
+  const p = document.getElementById('homeModelPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+async function fetchHomeModels() {
+  const c = getConfig();
+  if (!c.imgUrl || !c.imgKey) { alert('请先在API设置中配置图片API'); return; }
+  const el = document.getElementById('homeModelList');
+  el.innerHTML = '<p style="color:var(--text2);font-size:12px">加载中...</p>';
+  try {
+    const resp = await fetch(c.imgUrl.replace(/\/+$/,'').replace(/\/(images\/(edits|generations)|chat\/completions)$/,'')+'/models', { headers:{'Authorization':'Bearer '+c.imgKey} });
+    const data = await resp.json();
+    const models = (data.data||[]).map(m=>m.id).filter(Boolean);
+    el.innerHTML = models.map(m => `<button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="selectHomeModel('${m}')">${m}</button>`).join('');
+  } catch(e) { el.innerHTML = '<p style="color:var(--danger);font-size:12px">获取失败</p>'; }
+}
+
+function selectHomeModel(m) {
+  state.apiConfig.imgModel = m;
+  localStorage.setItem('ecom_api_config', JSON.stringify(state.apiConfig));
+  document.getElementById('homeModelBtn').textContent = m;
+  document.getElementById('homeModelPanel').style.display = 'none';
+}
+
+function showRecipePanel() {
+  const p = document.getElementById('recipePanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyRecipe(wfKey) {
+  const prompt = getPromptFor(wfKey, 1);
+  if (prompt) {
+    document.getElementById('homePrompt').value = prompt;
+    document.getElementById('homeCharCount').textContent = prompt.length + '/2000';
+  }
+  document.getElementById('recipePanel').style.display = 'none';
+}
+
+async function homeGenerate() {
+  const c = getConfig();
+  if (!c.imgKey || !c.imgUrl) { alert('请先在API设置中配置图片生成API'); return; }
+  const model = c.imgModel || 'nano-banana-pro';
+  const prompt = document.getElementById('homePrompt').value;
+  if (!prompt.trim()) { alert('请输入提示词'); return; }
+  const ratio = document.getElementById('homeRatio').value;
+  let w = 1024, h = 1024;
+  if (ratio !== 'auto') { [w, h] = ratio.split('x').map(Number); }
+  const count = parseInt(document.getElementById('homeCount').value);
+  const resultArea = document.getElementById('homeResultArea');
+  resultArea.innerHTML = `<p><span class="loading"></span> 正在生成 ${count} 张图片...</p>`;
+
+  const results = [];
+  for (let i = 0; i < count; i++) {
+    resultArea.innerHTML = `<p><span class="loading"></span> 正在生成第 ${i+1}/${count} 张...</p>` + renderHomeResults(results);
+    const res = await generateSingleImage(prompt, w, h, {...c, imgModel: model});
+    results.push(res);
+    if (i < count - 1) await sleep(3000);
+  }
+  resultArea.innerHTML = renderHomeResults(results);
+}
+
+function renderHomeResults(results) {
+  if (!results.length) return '';
+  return '<div class="result-grid">' + results.map((r,i) => {
+    if (r.url) return `<div style="text-align:center"><img src="${r.url}" referrerpolicy="no-referrer" crossorigin="anonymous" style="width:100%;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><div style="display:none;padding:8px;background:var(--surface2);border-radius:8px"><a href="${r.url}" target="_blank" style="color:var(--primary);font-size:11px">点击查看</a></div><a href="${r.url}" target="_blank" class="btn btn-copy" style="margin-top:4px;text-decoration:none;display:inline-block;font-size:10px">打开</a></div>`;
+    return `<div class="card" style="padding:8px"><p style="color:var(--danger);font-size:11px">失败: ${r.error}</p></div>`;
+  }).join('') + '</div>';
+}
+
+function renderSettings() {
+  const c = getConfig();
+  const main = document.getElementById('mainContent');
+  main.innerHTML = `
+    <div class="header"><button class="menu-toggle" onclick="toggleDrawer()">☰</button><h2>API 设置</h2></div>
+    <div class="content">
+      <div class="card"><h3>文本AI API（用于产品识别和提示词生成）</h3>
+        <div class="form-group"><label>API Base URL（填写基础地址，系统自动拼接路径）</label><input id="sTextUrl" value="${c.textUrl}" placeholder="https://api.openai.com/v1" oninput="detectProvider('text')"></div>
+        <div class="form-group"><label>API Key</label>
+          <div style="display:flex;gap:8px"><input id="sTextKey" type="password" value="${c.textKey}" placeholder="sk-..." style="flex:1">
+          <button class="btn btn-secondary" onclick="togglePwd('sTextKey')">显示</button></div>
+        </div>
+        <div class="form-group"><label>模型 <span id="textProviderTag" style="font-size:10px;background:var(--primary);padding:2px 6px;border-radius:4px;color:#fff"></span></label>
+          <div style="display:flex;gap:8px"><input id="sTextModel" value="${c.textModel}" placeholder="如 claude-sonnet-4-6" style="flex:1">
+          <button class="btn btn-primary" onclick="fetchModels('text')">获取模型</button></div>
+        </div>
+        <div id="textModelStatus" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+      </div>
+      <div class="card"><h3>图片生成API（用于最终生图）</h3>
+        <div class="form-group"><label>API Base URL</label><input id="sImgUrl" value="${c.imgUrl}" placeholder="https://api.example.com/v1" oninput="detectProvider('img')"></div>
+        <div class="form-group"><label>API Key</label>
+          <div style="display:flex;gap:8px"><input id="sImgKey" type="password" value="${c.imgKey}" placeholder="API密钥" style="flex:1">
+          <button class="btn btn-secondary" onclick="togglePwd('sImgKey')">显示</button></div>
+        </div>
+        <div class="form-group"><label>模型 <span id="imgProviderTag" style="font-size:10px;background:var(--success);padding:2px 6px;border-radius:4px;color:#fff"></span></label>
+          <div style="display:flex;gap:8px"><input id="sImgModel" value="${c.imgModel}" placeholder="如 nano-banana-pro" style="flex:1">
+          <button class="btn btn-primary" onclick="fetchModels('img')">获取模型</button></div>
+        </div>
+        <div class="form-group"><label>请求格式（不确定选"自动检测"）</label>
+          <select id="sImgFormat">
+            <option value="auto" ${(state.apiConfig.imgFormat||'auto')==='auto'?'selected':''}>自动检测（根据URL判断）</option>
+            <option value="openai" ${state.apiConfig.imgFormat==='openai'?'selected':''}>OpenAI（size: "1024x1024"）</option>
+            <option value="siliconflow" ${state.apiConfig.imgFormat==='siliconflow'?'selected':''}>SiliconFlow（image_size: "1024x1024"）</option>
+            <option value="dashscope" ${state.apiConfig.imgFormat==='dashscope'?'selected':''}>通义万相（input.prompt + parameters.size）</option>
+            <option value="zhipu" ${state.apiConfig.imgFormat==='zhipu'?'selected':''}>智谱AI（prompt + size）</option>
+            <option value="replicate" ${state.apiConfig.imgFormat==='replicate'?'selected':''}>Replicate（input: {prompt, width, height}）</option>
+            <option value="custom" ${state.apiConfig.imgFormat==='custom'?'selected':''}>自定义模板</option>
+          </select>
+        </div>
+        <div class="form-group" id="customTemplateGroup" style="display:${state.apiConfig.imgFormat==='custom'?'block':'none'}">
+          <label>自定义请求体模板（JSON，支持变量：{{prompt}} {{width}} {{height}} {{model}} {{size}}）</label>
+          <textarea id="sImgBodyTemplate" style="min-height:80px;font-size:11px">${state.apiConfig.imgBodyTemplate || '{"model":"{{model}}","prompt":"{{prompt}}","width":{{width}},"height":{{height}}}'}</textarea>
+        </div>
+        <div id="imgModelStatus" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="doSaveConfig()">保存设置</button>
+        <button class="btn btn-success" onclick="testApi()">测试文本API</button>
+        <button class="btn btn-secondary" onclick="testImgApi()">测试图片API</button>
+      </div>
+      <div id="testResult" style="margin-top:12px"></div>
+    </div>`;
+  detectProvider('text');
+  detectProvider('img');
+  restoreModelSelections(c);
+}
+
+function doSaveConfig() {
+  try {
+    saveConfig({
+      textUrl: (document.getElementById('sTextUrl')?.value || '').replace(/\/+$/, ''),
+      textKey: document.getElementById('sTextKey')?.value || '',
+      textModel: document.getElementById('sTextModel')?.value || '',
+      imgUrl: (document.getElementById('sImgUrl')?.value || '').replace(/\/+$/, ''),
+      imgKey: document.getElementById('sImgKey')?.value || '',
+      imgModel: document.getElementById('sImgModel')?.value || '',
+      imgFormat: document.getElementById('sImgFormat')?.value || 'auto',
+      imgBodyTemplate: document.getElementById('sImgBodyTemplate')?.value || '',
+    });
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ 已保存';
+    btn.style.background = 'var(--success)';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+  } catch(e) {
+    const btn = event.target;
+    btn.textContent = '保存失败';
+    btn.style.background = 'var(--danger)';
+    setTimeout(() => { btn.textContent = '保存设置'; btn.style.background = ''; }, 2000);
+  }
+}
+
+function togglePwd(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function detectProvider(type) {
+  const urlEl = document.getElementById(type === 'text' ? 'sTextUrl' : 'sImgUrl');
+  const tagEl = document.getElementById(type + 'ProviderTag');
+  if (!urlEl || !tagEl) return;
+  const url = urlEl.value.toLowerCase();
+  let provider = '自定义';
+  if (url.includes('openai.com')) provider = 'OpenAI';
+  else if (url.includes('anthropic') || url.includes('claude')) provider = 'Anthropic';
+  else if (url.includes('dashscope') || url.includes('aliyun')) provider = '通义千问';
+  else if (url.includes('volcengine') || url.includes('doubao') || url.includes('ark.cn')) provider = '豆包';
+  else if (url.includes('bigmodel') || url.includes('zhipu')) provider = '智谱AI';
+  else if (url.includes('moonshot') || url.includes('kimi')) provider = 'Kimi';
+  else if (url.includes('deepseek')) provider = 'DeepSeek';
+  else if (url.includes('baidu') || url.includes('wenxin')) provider = '文心一言';
+  else if (url.includes('siliconflow')) provider = 'SiliconFlow';
+  else if (url.includes('together')) provider = 'Together AI';
+  else if (url.includes('groq')) provider = 'Groq';
+  else if (url.includes('lovart')) provider = 'Lovart';
+  else if (url.includes('jimeng') || url.includes('jianying')) provider = '即梦AI';
+  else if (url.includes('midjourney')) provider = 'Midjourney';
+  else if (url.includes('stability') || url.includes('stable')) provider = 'Stability AI';
+  else if (url.includes('replicate')) provider = 'Replicate';
+  else if (url.includes('hunyuan') || url.includes('tencent')) provider = '腾讯混元';
+  else if (url.includes('spark') || url.includes('xfyun')) provider = '讯飞星火';
+  else if (url.includes('minimax')) provider = 'MiniMax';
+  else if (url.includes('yi.') || url.includes('lingyiwanwu')) provider = '零一万物';
+  else if (url.includes('openrouter')) provider = 'OpenRouter';
+  else if (url) provider = '兼容API';
+  tagEl.textContent = provider;
+}
+
+function restoreModelSelections(c) {
+  // input fields already have value set via template literal
+}
+
+// SPLIT_FETCH_MODELS
+
+async function fetchModels(type) {
+  const urlEl = document.getElementById(type === 'text' ? 'sTextUrl' : 'sImgUrl');
+  const keyEl = document.getElementById(type === 'text' ? 'sTextKey' : 'sImgKey');
+  const selEl = document.getElementById(type === 'text' ? 'sTextModel' : 'sImgModel');
+  const statusEl = document.getElementById(type + 'ModelStatus');
+  const baseUrl = urlEl.value.replace(/\/+$/, '');
+  const key = keyEl.value;
+
+  if (!baseUrl || !key) { statusEl.textContent = '请先填写API地址和Key'; return; }
+  statusEl.innerHTML = '<span class="loading"></span> 正在获取模型列表...';
+
+  let modelsUrl = baseUrl + '/models';
+  if (baseUrl.includes('/chat/completions')) modelsUrl = baseUrl.replace('/chat/completions', '/models');
+  if (baseUrl.includes('/images/generations')) modelsUrl = baseUrl.replace('/images/generations', '/models');
+  if (baseUrl.includes('/images/edits')) modelsUrl = baseUrl.replace('/images/edits', '/models');
+
+  try {
+    const resp = await fetch(modelsUrl, {
+      headers: { 'Authorization': `Bearer ${key}`, 'x-api-key': key, 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json();
+    let models = [];
+
+    if (data.data && Array.isArray(data.data)) {
+      models = data.data.map(m => m.id || m.name || m).filter(Boolean);
+    } else if (Array.isArray(data.models)) {
+      models = data.models.map(m => m.id || m.name || m).filter(Boolean);
+    } else if (Array.isArray(data)) {
+      models = data.map(m => typeof m === 'string' ? m : (m.id || m.name)).filter(Boolean);
+    } else if (data.result && Array.isArray(data.result)) {
+      models = data.result.map(m => m.id || m.name || m).filter(Boolean);
+    }
+
+    if (models.length === 0) {
+      statusEl.innerHTML = `<span style="color:var(--warning)">未能解析模型列表，返回数据：${JSON.stringify(data).slice(0,200)}</span>`;
+      return;
+    }
+
+    models.sort();
+    const inputEl = document.getElementById(type === 'text' ? 'sTextModel' : 'sImgModel');
+    if (inputEl && models.length > 0) inputEl.value = models[0];
+    statusEl.innerHTML = `<span style="color:var(--success)">已获取 ${models.length} 个模型，点击选择：</span><br>` + models.map(m => `<a href="#" onclick="document.getElementById('${type==='text'?'sTextModel':'sImgModel'}').value='${m}';return false" style="color:var(--primary);margin-right:8px;font-size:12px">${m}</a>`).join('');
+  } catch (err) {
+    const isCors = err.message === 'Failed to fetch' || err.message === 'Load failed';
+    statusEl.innerHTML = isCors
+      ? `<span style="color:var(--warning)">获取失败（跨域限制）：请直接在上方输入框手动填写模型名称（如 gpt-image-2），或安装浏览器CORS插件后重试</span>`
+      : `<span style="color:var(--danger)">获取失败: ${err.message}</span>`;
+  }
+}
+
+async function testImgApi() {
+  const c = getConfig();
+  const el = document.getElementById('testResult');
+  if (!c.imgUrl || !c.imgKey) { el.innerHTML = '<span style="color:var(--warning)">请先配置图片API</span>'; return; }
+  el.innerHTML = '<span class="loading"></span> 测试图片API连接...';
+  try {
+    const modelsUrl = c.imgUrl.replace(/\/+$/, '').replace(/\/(images\/(edits|generations)|chat\/completions)$/, '') + '/models';
+    const resp = await fetch(modelsUrl, { headers: { 'Authorization': `Bearer ${c.imgKey}`, 'x-api-key': c.imgKey } });
+    if (resp.ok) el.innerHTML = '<span style="color:var(--success)">图片API连接成功</span>';
+    else el.innerHTML = `<span style="color:var(--warning)">HTTP ${resp.status}: ${resp.statusText}</span>`;
+  } catch (err) {
+    el.innerHTML = `<span style="color:var(--danger)">连接失败: ${err.message}</span>`;
+  }
+}
+
+function handleUpload(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(f => {
+    const img = new Image();
+    img.onload = () => {
+      const maxSize = 1200;
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.8);
+      state.uploadedImages.push(compressed);
+      showPreviews();
+    };
+    img.src = URL.createObjectURL(f);
+  });
+}
+
+function showPreviews() {
+  const area = document.getElementById('previewArea');
+  if (!area) return;
+  area.innerHTML = state.uploadedImages.map((img,i) => `<div class="img-thumb"><img src="${img}"><span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;padding:1px 5px;border-radius:4px">图${i+1}</span><button class="del-btn" onclick="event.stopPropagation();removeImage(${i})">×</button></div>`).join('');
+}
+
+function removeImage(index) {
+  state.uploadedImages.splice(index, 1);
+  showPreviews();
+}
+
+function handleProductUpload(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = ev => { state.productImages.push(ev.target.result); showProductPreviews(); };
+    reader.readAsDataURL(f);
+  });
+}
+
+function showProductPreviews() {
+  const area = document.getElementById('productPreviewArea');
+  if (!area) return;
+  area.innerHTML = state.productImages.map((img,i) => `<div class="img-thumb"><img src="${img}"><span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;padding:1px 5px;border-radius:4px">图${i+1}</span><button class="del-btn" onclick="event.stopPropagation();removeProductImage(${i})">×</button></div>`).join('');
+}
+
+function removeProductImage(index) {
+  state.productImages.splice(index, 1);
+  showProductPreviews();
+}
+
+function copyText(id) {
+  const el = document.getElementById(id);
+  const text = el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' ? el.value : el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '已复制';
+    setTimeout(() => btn.textContent = '复制', 1500);
+  });
+}
+
+function getInitSuffix() {
+  const wf = state.currentWorkflow;
+  const isCross = ['cross-main','cross-poster','cross-detail','cross-style'].includes(wf);
+  const isAplus = ['amazon-aplus-module','amazon-aplus-oneshot'].includes(wf);
+  if (isCross) {
+    const country = document.getElementById('initCountry')?.value || '';
+    const platform = document.getElementById('initPlatform')?.value || '';
+    state.initCountry = country;
+    state.initPlatform = platform;
+    if (!country && !platform) return '';
+    return `\n\n# 初始化\n1. 目标国家/地区：${country||'[未填写]'}\n2. 目标电商平台：${platform||'[未填写]'}\n3. 上传图片：[产品实拍图/包装图]`;
+  }
+  if (isAplus) {
+    const country = document.getElementById('initCountry')?.value || '';
+    const type = document.getElementById('initAplusType')?.value || '普通A+';
+    const count = document.getElementById('initAplusCount')?.value || '5';
+    state.initCountry = country;
+    state.initAplusType = type;
+    state.initAplusCount = count;
+    return `\n\n# 初始化\n1. 目标国家/地区：${country||'[未填写]'}\n2. A+类型：${type}\n3. A+页面数量：${count}屏\n4. 上传图片：[产品实拍图/包装图]`;
+  }
+  return '';
+}
+
+function copyRecognitionPrompt() {
+  const prompt = document.getElementById('promptBox').textContent + getInitSuffix();
+  navigator.clipboard.writeText(prompt).then(() => {
+    const btn = event.target;
+    btn.textContent = '已复制';
+    setTimeout(() => btn.textContent = '复制提示词', 1500);
+  });
+}
+
+async function callTextApi(step) {
+  const c = getConfig();
+  if (!c.textKey) { alert('请先在设置中配置文本AI的API Key'); return; }
+  if (!c.textModel) { alert('请先在设置中选择模型'); return; }
+  const prompt = getPromptFor(state.currentWorkflow, step);
+  const initSuffix = (step === 0) ? getInitSuffix() : '';
+  const fullPrompt = prompt + initSuffix;
+  const sysMsg = { role: 'system', content: '你是一名资深电商设计师助手。重要规则：你必须直接以纯文本形式回复，禁止调用任何工具(tool)或函数(function)，禁止输出JSON格式，禁止使用EnterPlanMode或任何其他工具。直接输出设计方案的文字内容即可。' };
+  const userContent = step === 1
+    ? '以下是产品识别报告：\n' + state.recognitionResult + '\n\n---\n\n请根据以上识别报告，' + fullPrompt + '\n\n【重要】请直接输出提示词文本，不要调用任何工具或函数。'
+    : fullPrompt + '\n\n【重要】请直接输出识别报告文本，不要调用任何工具或函数。';
+  const messages = [sysMsg];
+  if (state.uploadedImages.length > 0 && step === 0) {
+    const maxImages = Math.min(state.uploadedImages.length, 4);
+    const imgs = state.uploadedImages.slice(0, maxImages);
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: userContent },
+        ...imgs.map(img => ({ type: 'image_url', image_url: { url: img, detail: 'low' } }))
+      ]
+    });
+  } else {
+    messages.push({ role: 'user', content: userContent });
+  }
+
+  const statusEl = step === 0 ? document.getElementById('recognitionResult') : document.getElementById('genPrompts');
+  if (statusEl) statusEl.value = '正在调用AI，请稍候...';
+
+  const baseUrl = c.textUrl.replace(/\/+$/, '');
+  const endpoint = baseUrl.includes('/chat/completions') ? baseUrl : baseUrl + '/chat/completions';
+
+  try {
+    const body = { model: c.textModel, messages, max_tokens: 8192, tool_choice: 'none' };
+    let result = await doTextRequest(endpoint, c.textKey, body);
+
+    if (result.startsWith('[模型仍在尝试调用工具')) {
+      const retryMessages = [
+        { role: 'system', content: 'IMPORTANT: Do NOT use any tools. Do NOT call any functions. Respond with plain text ONLY. You are a senior e-commerce designer assistant.' },
+        { role: 'user', content: '请注意：直接用纯文本回复，不要使用任何工具或函数调用。\n\n' + userContent }
+      ];
+      const retryBody = { model: c.textModel, messages: retryMessages, max_tokens: 8192 };
+      result = await doTextRequest(endpoint, c.textKey, retryBody);
+    }
+
+    if (step === 0) { state.recognitionResult = result; }
+    else { state.generatedPrompts = result; }
+    if (statusEl) statusEl.value = result;
+  } catch (err) {
+    if (statusEl) statusEl.value = '调用失败: ' + err.message;
+  }
+}
+
+async function doTextRequest(endpoint, key, body) {
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'x-api-key': key },
+    body: JSON.stringify(body)
+  });
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) {
+    if (text.startsWith('<!') || text.startsWith('<html')) {
+      return `接口返回了HTML页面而非JSON（HTTP ${resp.status}）。可能原因：\n1. API地址配置错误\n2. 网络被代理/VPN/防火墙拦截\n3. API Key无效\n\n请求地址: ${endpoint}`;
+    }
+    return `JSON解析失败（HTTP ${resp.status}）: ${text.slice(0, 300)}`;
+  }
+
+  if (data.choices && data.choices[0]) {
+    const msg = data.choices[0].message;
+    if (msg.content && msg.content.length > 0) {
+      return msg.content;
+    } else if (msg.tool_calls && msg.tool_calls.length > 0) {
+      return '[模型仍在尝试调用工具，建议在API设置中换一个模型（如 gpt-4o、claude-sonnet-4-6、deepseek-chat）]\n\n当前中转站的该模型被配置为带工具的Agent模式，无法直接输出文本。\n\n解决方案：\n1. 在API设置中切换到其他模型\n2. 或手动复制上方的提示词到其他AI对话中生成';
+    } else {
+      return '[模型返回空内容，请重试]';
+    }
+  } else if (data.content && Array.isArray(data.content)) {
+    return data.content.map(b => b.text || '').join('\n');
+  } else if (data.error) {
+    return '接口错误: ' + (data.error.message || JSON.stringify(data.error));
+  }
+  return '未知返回格式: ' + JSON.stringify(data).slice(0, 500);
+}
+
+async function callImageApi() {
+  const c = getConfig();
+  if (!c.imgKey && !c.imgUrl) {
+    alert('请先在设置中配置图片生成API'); return;
+  }
+  if (!c.imgModel) { alert('请先在设置中选择图片生成模型'); return; }
+  const prompt = document.getElementById('currentPrompt')?.value || document.getElementById('whiteBgPrompt')?.value || '';
+  const resultArea = document.getElementById('resultArea');
+  if (resultArea) resultArea.innerHTML = '<div class="loading"></div> <span style="color:var(--text2)">正在生成图片...</span>';
+
+  const baseUrl = c.imgUrl.replace(/\/+$/, '');
+  const endpoint = baseUrl.includes('/images') ? baseUrl : baseUrl + '/images/generations';
+
+  try {
+    const body = { model: c.imgModel, prompt, n: 1, size: '1024x1024' };
+    if (state.uploadedImages.length > 0) body.image = state.uploadedImages[0];
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.imgKey}`, 'x-api-key': c.imgKey },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data.data && data.data[0]) {
+      const url = data.data[0].url || data.data[0].b64_json;
+      if (resultArea) resultArea.innerHTML = `<div class="result-grid"><img src="${url.startsWith('http')?url:'data:image/png;base64,'+url}"></div>`;
+    } else {
+      if (resultArea) resultArea.innerHTML = `<p style="color:var(--warning)">返回数据：${JSON.stringify(data).slice(0,500)}</p>`;
+    }
+  } catch (err) {
+    if (resultArea) resultArea.innerHTML = `<p style="color:var(--danger)">调用失败: ${err.message}</p>`;
+  }
+}
+
+async function testApi() {
+  const c = getConfig();
+  const el = document.getElementById('testResult');
+  if (!c.textKey) { el.innerHTML = '<span style="color:var(--warning)">请先填写文本API Key</span>'; return; }
+  el.innerHTML = '<span class="loading"></span> 测试文本API连接...';
+  const baseUrl = c.textUrl.replace(/\/+$/, '');
+  const endpoint = baseUrl.includes('/chat/completions') ? baseUrl : baseUrl + '/chat/completions';
+  try {
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.textKey}`, 'x-api-key': c.textKey },
+      body: JSON.stringify({ model: c.textModel || 'gpt-4o', messages: [{ role:'user', content:'hi' }], max_tokens: 10 })
+    });
+    const data = await resp.json();
+    if (data.choices || data.content) el.innerHTML = '<span style="color:var(--success)">文本API连接成功</span>';
+    else el.innerHTML = `<span style="color:var(--warning)">返回: ${JSON.stringify(data).slice(0,200)}</span>`;
+  } catch (err) {
+    el.innerHTML = `<span style="color:var(--danger)">连接失败: ${err.message}</span>`;
+  }
+}
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    state.currentWorkflow = item.dataset.workflow;
+    state.currentStep = 0;
+    state.uploadedImages = [];
+    state.productImages = [];
+    state.recognitionResult = '';
+    state.generatedPrompts = '';
+    toggleDrawer(false);
+    renderMain();
+  });
+});
+
+function toggleDrawer(forceState) {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const isOpen = typeof forceState === 'boolean' ? !forceState : sidebar.classList.contains('open');
+  sidebar.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('show', !isOpen);
+}
+
+// Init
+renderMain();
+
+
+</script>
+</body>
+</html>
